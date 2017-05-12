@@ -14,12 +14,6 @@ using Discord.WebSocket;
 using IChannel = Discord.IChannel;
 
 namespace BanjoBot {
-    //TODO: try catch throws database exceptions
-    //TODO: OnOffline remove from lobby
-    //TODO: Refactor: Move everything league related to LeagueController
-    //TODO: Refactor: CheckFunctions, e.g. current channel or #parameter
-    //TODO: ^Check preconditions
-    //TODO: !AddWarning
     public class CommandModule : ModuleBase
     {
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
@@ -92,7 +86,7 @@ namespace BanjoBot {
         }
 
         [Command("showstats"), Summary("Shows the stats of a player (option: @player)"), Alias(new string[] { "stats", "gs" }), RequireLeaguePermission]
-        public async Task ShowStats([Summary("@Player")]IGuildUser guildUser = null) {
+        public async Task ShowStats([Summary("@Player")]IGuildUser guildUser, int season = -1) {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = null;
@@ -104,7 +98,8 @@ namespace BanjoBot {
             {
                 player = lc.League.GetPlayerByDiscordID(guildUser.Id);
             }
-            await lc.GetStats(Context.Channel, player);
+
+            await lc.ShowStats(Context.Channel, player, season);
         }
 
         [Command("showhistory"), Summary("Shows your match history (option: !history <season #>"), Alias(new string[] { "sh", "history" }), RequireLeaguePermission]

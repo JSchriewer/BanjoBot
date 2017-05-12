@@ -666,17 +666,21 @@ namespace BanjoBot
         /// </summary>
         /// <param name="textChannel">Channel to send message to.</param>
         /// <param name="user">Users whos stats will be displayed.</param>
-        public async Task GetStats(IMessageChannel textChannel, Player player)
+        public async Task ShowStats(IMessageChannel textChannel, Player player, int season)
         {
-            if (player != null)
+            PlayerStats stats = player.GetLeagueStat(League.LeagueID, season);
+            if (stats == null)
             {
-                int wins = player.GetLeagueStat(League.LeagueID, League.Season).Wins;
-                int losses = player.GetLeagueStat(League.LeagueID, League.Season).Losses;
-                int gamesPlayed = wins + losses;
-                await SendTempMessage(textChannel, player.PlayerMMRString(League.LeagueID,League.Season) + " has " + gamesPlayed + " games played, " + wins + " wins, " + losses + " losses.\nCurrent win streak: " + player.GetLeagueStat(League.LeagueID, League.Season).Streak + ".");
+                await SendTempMessage(textChannel, "No stats found");
+                return;
             }
-            else
-                await SendTempMessage(textChannel, player.User.Username + " has no recorded stats.");
+
+            int wins = stats.Wins;
+            int losses = stats.Losses;
+            int gamesPlayed = wins + losses;
+            await SendTempMessage(textChannel, player.PlayerMMRString(League.LeagueID, League.Season) + " has " + gamesPlayed + " games played, " + wins + " wins, " + losses + " losses.\nCurrent win streak: " + stats.Streak + ".");
+         
+
         }
 
         public async Task ShowPlayerProfile(Player  player, int season)
