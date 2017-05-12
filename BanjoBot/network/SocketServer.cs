@@ -48,12 +48,12 @@ namespace BanjoBot
                         'LeagueID' : '23',
                         'SteamMatchID' : '156756167894',
                         'Season' : '1',
-                        'Winner' : '2',
+                        'Winner' : '1',
                         'Duration' : '1800',
                         'PlayerMatchStats': [
                             {
                                 'HeroID' : '12',
-                                'SteamID':'12353453',
+                                'SteamID':'765610',
                                 'Goals':'4',
                                 'Assist':'2',
                                 'Steals':'5',
@@ -66,7 +66,7 @@ namespace BanjoBot
                                 'Points':'112',
                                 'PossessionTime':'120',
                                 'TimeAsGoalie':'100',
-                                'Team':'2',
+                                'Team':'0',
                             },  
                             {
                                 'SteamID':'999999',
@@ -82,7 +82,7 @@ namespace BanjoBot
                                 'Points':'112',
                                 'PossessionTime':'120',
                                 'TimeAsGoalie':'100',
-                                'Team':'2',
+                                'Team':'1',
                             }
                         ]
                     }
