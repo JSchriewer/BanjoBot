@@ -42,9 +42,6 @@ namespace BanjoBot.model {
             {
                 averageMMR = averageMMR / team.Count;
             }
-        
-
-           
 
             return averageMMR;
         }

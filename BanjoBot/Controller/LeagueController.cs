@@ -130,7 +130,7 @@ namespace BanjoBot
             }
             
 
-            await _database.UpdateMatchResult(match); //TODO: Check Crash for pub mmr
+            await _database.UpdateMatchResult(match); 
             League.Matches.Add(match);
 
             AdjustPlayerStats(winner, looser);
@@ -138,7 +138,7 @@ namespace BanjoBot
             allPlayer.AddRange(winner);
             allPlayer.AddRange(looser);
             foreach (var player in allPlayer) {
-                await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season)); //TODO: Check Crash for pub mmr
+                await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season)); 
             }
          
         }
@@ -150,7 +150,6 @@ namespace BanjoBot
 
             await UpdateChannelWithLobby();
             if (game.StartMessage != null) {
-                //TODO: Doesnt work with CloseByEvent
                 await game.StartMessage.UnpinAsync();
             }
 
@@ -833,6 +832,7 @@ namespace BanjoBot
                 await HostGame(startedGame.Host);
             }
 
+            string message = "";
             if (Lobby.WaitingList.Count == 1)
             {
                 foreach (var player in startedGame.WaitingList)
@@ -840,18 +840,19 @@ namespace BanjoBot
                     if (player.User.Id != playerToRemove.Id && !Lobby.WaitingList.Contains(player))
                         Lobby.AddPlayer(player);
                 }
-                string message = "";
+
                 if (League.DiscordInformation.LeagueRole != null)
                     message = League.DiscordInformation.LeagueRole.Mention;
-                await SendMessage(textChannel,message + "Lobby recreated  (" + Lobby.WaitingList.Count() + "/8)");
+                message += " Game BBL#" + startedGame.GameNumber + " ended in a Draw!\n Lobby got recreated  (" +
+                           Lobby.WaitingList.Count() + "/8)";
             }
             else
             {
-                await SendMessage(textChannel,"There is already a open Lobby with more than 1 player, please rejoin yourself");
+                message += " Game BBL#" + startedGame.GameNumber + " ended in a Draw!\n There is already a open Lobby with more than 1 player, please rejoin yourself";
             }
 
+            await SendMessage(textChannel, message);
             await UpdateChannelWithLobby();
-
         }
        
         public async Task StartNewSeason(IMessageChannel textChannel)
