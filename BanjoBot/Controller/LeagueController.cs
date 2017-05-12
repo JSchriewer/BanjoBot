@@ -827,13 +827,18 @@ namespace BanjoBot
 
             await CloseDiscordGame(startedGame, Teams.Draw);
 
+            Lobby lobby;
             if (!LobbyExists())
             {
-                await HostGame(startedGame.Host);
+                lobby = await HostGame(startedGame.Host);
+            }
+            else
+            {
+                lobby = Lobby;
             }
 
             string message = "";
-            if (Lobby.WaitingList.Count == 1)
+            if (lobby.WaitingList.Count == 1)
             {
                 foreach (var player in startedGame.WaitingList)
                 {
