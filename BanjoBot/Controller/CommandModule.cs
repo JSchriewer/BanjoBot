@@ -41,7 +41,7 @@ namespace BanjoBot {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(Context.User.Id);
-            await lc.TryHostGame(Context.Channel, player);
+            await lc.CreateLobby(Context.Channel, player);
         }
 
         [Command("join"), Summary("Joins the open game"), Alias(new string[] { "j"}), RequireLeaguePermission]
@@ -49,7 +49,7 @@ namespace BanjoBot {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(Context.User.Id);
-            await lc.JoinGame(Context.Channel, player);  
+            await lc.JoinLobby(Context.Channel, player);  
         }
 
         [Command("leave"), Summary("Leaves the open game"), Alias(new string[] { "l" }), RequireLeaguePermission]
@@ -57,7 +57,7 @@ namespace BanjoBot {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(Context.User.Id);
-            await lc.LeaveGame(Context.Channel, player);
+            await lc.LeaveLobby(Context.Channel, player);
         }
 
         [Command("cancel"), Summary("Cancel the current lobby (only host / moderator)"), Alias(new string[] { "c" }), RequireLeaguePermission]
@@ -88,7 +88,7 @@ namespace BanjoBot {
         public async Task GetPlayers() {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
-            await lc.ListPlayers(Context.Channel);
+            await lc.ShowLobby(Context.Channel);
         }
 
         [Command("showstats"), Summary("Shows the stats of a player (option: @player)"), Alias(new string[] { "stats", "gs" }), RequireLeaguePermission]

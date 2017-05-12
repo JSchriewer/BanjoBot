@@ -301,7 +301,7 @@ namespace BanjoBot
         /// </summary>
         /// <param name="textChannel">The Channel to be broadcasted to.</param>
         /// <param name="host">The User who hosted the game.</param>
-        public async Task TryHostGame(IMessageChannel textChannel, Player host)
+        public async Task CreateLobby(IMessageChannel textChannel, Player host)
         {
             if (host.IsIngame())
             {
@@ -314,7 +314,10 @@ namespace BanjoBot
             {
                 Lobby newGame = await HostGame(host);
                 await UpdateChannelWithLobby();
-                await SendMessage(textChannel,"New Lobby created by " + host.PlayerMMRString(League.LeagueID, League.Season) + ". \nType !join to join the game. (" + newGame.WaitingList.Count() + "/8)");
+                string mention = "";
+                if (League.DiscordInformation.LeagueRole != null)
+                    mention = League.DiscordInformation.LeagueRole.Mention;
+                await SendMessage(textChannel,mention + " New Lobby created by " + host.PlayerMMRString(League.LeagueID, League.Season) + ". \nType !join to join the game. (" + newGame.WaitingList.Count() + "/8)");
             } else { 
                 await SendTempMessage(textChannel, host.User.Mention + " Lobby is already open. Only one Lobby may be hosted at a time. \nType !join to join the game.");
             }
@@ -325,7 +328,7 @@ namespace BanjoBot
         /// </summary>
         /// <param name="textChannel">The SocketGuildChannel to be broadcasted to.</param>
         /// <param name="player">User who wishes to join.</param>
-        public async Task JoinGame(IMessageChannel textChannel, Player player)
+        public async Task JoinLobby(IMessageChannel textChannel, Player player)
         {
             if (player.IsIngame())
             {
@@ -368,7 +371,7 @@ namespace BanjoBot
         /// </summary>
         /// <param name="textChannel">The Channel to be broadcasted to.</param>
         /// <param name="user">User who wishes to leave.</param>
-        public async Task LeaveGame(IMessageChannel textChannel, Player user)
+        public async Task LeaveLobby(IMessageChannel textChannel, Player user)
         {
             // If no games are open.
             if (!LobbyExists())
@@ -542,7 +545,7 @@ namespace BanjoBot
         /// Lists all of the players in the currently ActiveGame
         /// </summary>
         /// <param name="textChannel">Channel to broadcast to.</param>
-        public async Task ListPlayers(IMessageChannel textChannel)
+        public async Task ShowLobby(IMessageChannel textChannel)
         {
             if (Lobby == null)
             {
