@@ -21,6 +21,7 @@ namespace BanjoBot {
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _database;
         private CommandService _commandService;
+		private Random rnd = new Random();
 
         public CommandModule(DatabaseController databaseController, DiscordSocketClient bot, CommandService commandService)
         {
@@ -809,27 +810,37 @@ namespace BanjoBot {
 
         // Fundamental commands by prospekt
         [Command("increasemmr"), Summary("Increases MMR of <user> by the specified <mmr>")]
-        public async Task IncreaseMeme([Summary("userID")]int user, [Summary("mmr")]int mmr)
+        public async Task IncreaseMeme([Summary("@Player")]IGuildUser user, [Summary("mmr")]int mmr)
         {
-            if (user == 0) {
-                await ReplyAsync("Please enter a user to increase its mmr!");
+            if (user == null) {
+                await ReplyAsync("Please enter the name of the lucky user first!");
             }
             else if (mmr == 0) {
-                await ReplyAsync("Please enter the mmr amount to be increased for this user!");
+                await ReplyAsync("Please enter the mmr amount to be increased for this lucky user!");
             } else {
-				Random rnd = new Random();
 				int n = rnd.Next(700, 1700);
                 await ReplyAsync("Instructions unclear, setting all players mmr to " + n + " and shutting down bot...");
             }
         }
 
 		//private int saltCounter;
-		Random rnd = new Random();
 		[Command("salt"), Summary("How much salt can there be?")]
 		public async Task Salt()
 		{
 			int n = rnd.Next(1, 13);
 			await ReplyAsync("There have been " + n + " :PJSalt: occurrences today");
+		}
+
+		// By Grammis' request )))
+		[Command("penis"), Summary("How big is the schlong of <user>")]
+		public async Task Willy([Summary("@Player")]IGuildUser user)
+		{
+            if (user == null) {
+                await ReplyAsync("Missing user's name");
+            }
+			int n = rnd.Next(1, 20);
+			String d = new String('=', n);
+			await ReplyAsync("Size: 8" + d + "D");
 		}
 
         public bool CheckModeratorPermission(SocketGuildUser user, LeagueController lc)
