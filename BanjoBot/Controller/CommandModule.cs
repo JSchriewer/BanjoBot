@@ -806,6 +806,23 @@ namespace BanjoBot {
             await ReplyAsync("Fuck you");
         }
 
+
+        // Fundamental commands by prospekt
+        [Command("increasemmr"), Summary("Increases MMR of <user> by the specified <mmr>")]
+        public async Task IncreaseMeme([Summary("userID")]int user, [Summary("mmr")]int mmr)
+        {
+            if (user == 0) {
+                await ReplyAsync("Please enter a user to increase its mmr!");
+            }
+            else if (mmr == 0) {
+                await ReplyAsync("Please enter the mmr amount to be increased for this user!");
+            } else {
+				Random rnd = new Random();
+				int n = rnd.Next(700, 1700);
+                await ReplyAsync("Instructions unclear, setting all players mmr to " + n + " and shutting down bot...");
+            }
+        }
+
         public bool CheckModeratorPermission(SocketGuildUser user, LeagueController lc)
         {
             if (lc.League.DiscordInformation.ModeratorRole != null && (user.Roles.Contains(lc.League.DiscordInformation.ModeratorRole) || user.GuildPermissions.Administrator))
