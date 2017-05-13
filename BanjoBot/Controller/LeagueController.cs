@@ -881,10 +881,10 @@ namespace BanjoBot
                 }
             }
 
-            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.User.Mention;
+            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.User.Username;
             message = "**Season " + League.Season + " has ended.**\n";
-            message += "Most active player " + mentionMostActive + "\n";
-            message += "**Top Players Season " + League.Season + ": **\n```";
+            message += "Big thanks to our most active player " + mentionMostActive + " with " + max + " matches \n\n";
+            message += "**Top Players Season " + League.Season + ": **\n";
             var sortedDict = from entry in League.RegisteredPlayers orderby entry.GetLeagueStat(League.LeagueID, League.Season).MMR descending select entry;
 
             object[] args = new object[] { "Name", "MMR", "Matches", "Wins", "Losses" };
@@ -896,7 +896,7 @@ namespace BanjoBot
                         ? sortedDict.ElementAt(i).User.Username.Substring(0, 8)
                         : sortedDict.ElementAt(i).User.Username;
                     args = new object[] { username, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
-                    message += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
+                    topPlayers += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
                 }
 
                 PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
@@ -905,9 +905,9 @@ namespace BanjoBot
             }
             string mention = "";
             if (League.DiscordInformation.LeagueRole != null)
-                mention = League.DiscordInformation.LeagueRole.Mention;
+                mention = League.DiscordInformation.LeagueRole.Mention + " ";
 
-            await SendMessage(textChannel,mention + "\n" + message + "```" + topPlayers + "```");
+            await SendMessage(textChannel,mention + message + "```" + topPlayers + "```");
             League.Season++;
             League.Matches = new List<MatchResult>();
             League.GameCounter = 0;
