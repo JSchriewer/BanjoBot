@@ -678,7 +678,7 @@ namespace BanjoBot
             int wins = stats.Wins;
             int losses = stats.Losses;
             int gamesPlayed = wins + losses;
-            await SendTempMessage(textChannel, player.PlayerMMRString(League.LeagueID, League.Season) + " has " + gamesPlayed + " games played, " + wins + " wins, " + losses + " losses.\nCurrent win streak: " + stats.Streak + ".");
+            await SendTempMessage(textChannel, player.PlayerMMRString(League.LeagueID, season) + " has " + gamesPlayed + " games played, " + wins + " wins, " + losses + " losses.\nCurrent win streak: " + stats.Streak + ".");
          
 
         }
@@ -870,12 +870,25 @@ namespace BanjoBot
         public async Task StartNewSeason(IMessageChannel textChannel)
         {
             String message = "";
+            Player mostActive = null;
+            int max = Int32.MinValue;
+            foreach (var player in League.RegisteredPlayers)
+            {
+                if (player.GetLeagueStat(League.LeagueID, League.Season).MatchCount > max)
+                {
+                    mostActive = player;
+                    max = player.GetLeagueStat(League.LeagueID, League.Season).MatchCount;
+                }
+            }
+
+            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.User.Mention;
             message = "**Season " + League.Season + " has ended.**\n";
-            message += "**Top Players Season " + League.Season + ": **\n";
+            message += "Most active player " + mentionMostActive + "\n";
+            message += "**Top Players Season " + League.Season + ": **\n```";
             var sortedDict = from entry in League.RegisteredPlayers orderby entry.GetLeagueStat(League.LeagueID, League.Season).MMR descending select entry;
 
             object[] args = new object[] { "Name", "MMR", "Matches", "Wins", "Losses" };
-            message += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
+            string topPlayers = String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
             for (int i = 0; i < sortedDict.Count(); i++) {
                 if (i < 10) {
                     PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(League.LeagueID, League.Season);
@@ -890,8 +903,11 @@ namespace BanjoBot
                 sortedDict.ElementAt(i).PlayerStats.Add(newStats);
                 await _database.UpdatePlayerStats(sortedDict.ElementAt(i), newStats);
             }
+            string mention = "";
+            if (League.DiscordInformation.LeagueRole != null)
+                mention = League.DiscordInformation.LeagueRole.Mention;
 
-            await SendMessage(textChannel,"```" + message + "```");
+            await SendMessage(textChannel,mention + "\n" + message + "```" + topPlayers + "```");
             League.Season++;
             League.Matches = new List<MatchResult>();
             League.GameCounter = 0;
