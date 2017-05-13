@@ -83,8 +83,8 @@ namespace BanjoBot
         public async Task AddDiscordRole(Player player)
         {
             if (League.HasDiscord() && League.DiscordInformation.LeagueRole != null) {
-                if (!player.User.RoleIds.Contains(League.DiscordInformation.LeagueRole.Id)) {
-                    await player.User.AddRolesAsync(League.DiscordInformation.LeagueRole);
+                if (!player.User.Roles.Contains(League.DiscordInformation.LeagueRole)) {
+                    await player.User.AddRoleAsync(League.DiscordInformation.LeagueRole);
                 }
             }
         }
@@ -500,7 +500,7 @@ namespace BanjoBot
             }
              
             //TODO: refactor
-            if (player == Lobby.Host || player.User.RoleIds.Contains(League.DiscordInformation.ModeratorRole.Id) || player.User.GuildPermissions.Administrator)
+            if (player == Lobby.Host || player.User.Roles.Contains(League.DiscordInformation.ModeratorRole) || player.User.GuildPermissions.Administrator)
             {
                 await SendMessage(textChannel,"Game canceled by host " + player.User.Username + ".");     
                 await CancelLobby();

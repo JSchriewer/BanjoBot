@@ -251,6 +251,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controller\CommandHandler.cs" />
     <Compile Include="Controller\CommandModule.cs" />
     <Compile Include="model\MatchMaker.cs" />
     <Compile Include="persistence\DatabaseController.cs" />

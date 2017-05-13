@@ -22,6 +22,7 @@ namespace BanjoBot {
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _database;
         private CommandService _commandService;
+
         public CommandModule(DatabaseController databaseController, DiscordSocketClient bot, CommandService commandService)
         {
             _bot = bot;
@@ -730,11 +731,11 @@ namespace BanjoBot {
             // Assign new role to players
             foreach (var player in lc.League.RegisteredPlayers) {
                 if (role == null && lc.League.DiscordInformation.LeagueRole != null) {
-                    await player.User.RemoveRolesAsync(lc.League.DiscordInformation.LeagueRole);
+                    await player.User.RemoveRoleAsync(lc.League.DiscordInformation.LeagueRole);
                 }
                 else {
-                    if (!player.User.RoleIds.Contains(lc.League.DiscordInformation.LeagueRole.Id)) {
-                        await player.User.AddRolesAsync((SocketRole)role);
+                    if (!player.User.Roles.Contains(lc.League.DiscordInformation.LeagueRole)) {
+                        await player.User.AddRoleAsync((SocketRole)role);
                     }
 
                 }
@@ -808,7 +809,7 @@ namespace BanjoBot {
 
         public bool CheckModeratorPermission(SocketGuildUser user, LeagueController lc)
         {
-            if (lc.League.DiscordInformation.ModeratorRole != null && (user.RoleIds.Contains(lc.League.DiscordInformation.ModeratorRole.Id) || user.GuildPermissions.Administrator))
+            if (lc.League.DiscordInformation.ModeratorRole != null && (user.Roles.Contains(lc.League.DiscordInformation.ModeratorRole) || user.GuildPermissions.Administrator))
             {
                 return true;
             }
@@ -820,7 +821,7 @@ namespace BanjoBot {
     }
 
     public class RequireLeaguePermission : PreconditionAttribute {
-        public override async Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IDependencyMap map) {
+        public override async Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IServiceProvider map) {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)context.Channel;   
             LeagueController lc = LeagueCoordinator.Instance.GetLeagueController(socketGuildChannel);
             if (lc == null) {
@@ -841,7 +842,7 @@ namespace BanjoBot {
 
 
     public class RequireLeagueChannel : PreconditionAttribute {
-        public override async Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IDependencyMap map) {
+        public override async Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IServiceProvider map) {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)context.Channel;
             LeagueController lc = LeagueCoordinator.Instance.GetLeagueController(socketGuildChannel);
             if (lc == null)

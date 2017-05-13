@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using BanjoBot.Controller;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using log4net;
 using log4net.Config;
+using Microsoft.Extensions.DependencyInjection;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -23,8 +25,7 @@ namespace BanjoBot
         private List<SocketGuild> _initialisedServers;
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _databaseController;
-        private CommandService _commands;
-        private DependencyMap _commandMap;
+        private CommandHandler _handler;
         private SocketServer _socketServer;
 
         [STAThread]
@@ -39,10 +40,11 @@ namespace BanjoBot
         {
             _bot = new DiscordSocketClient(new DiscordSocketConfig
                 {
-                    LogLevel = LogSeverity.Info
+                    LogLevel = LogSeverity.Debug
+                    
                 });
-
-            _bot.Log += Log;
+            
+            //_bot.Log += Log;
             _bot.GuildAvailable += ServerConnected;
             _bot.GuildUnavailable += ServerDisconnected;
             _bot.MessageReceived += BotOnMessageReceived;
@@ -53,10 +55,6 @@ namespace BanjoBot
 
             // Initialise commands
             Console.WriteLine("Initialising commands...");
-            CommandServiceConfig commandConfig = new CommandServiceConfig();
-            commandConfig.CaseSensitiveCommands = false;
-            _commands = new CommandService();
-            _commandMap = new DependencyMap();
             await InitialiseCommands();
             await LoadLeagueInformation();
             await LoadPlayerBase();
@@ -64,7 +62,7 @@ namespace BanjoBot
             _socketServer = new SocketServer(_leagueCoordinator, _databaseController);
 
             await _bot.LoginAsync(TokenType.Bot, TOKEN);
-            await _bot.ConnectAsync();
+            await _bot.StartAsync();
             await Task.Delay(-1);
         }
        
@@ -232,40 +230,57 @@ namespace BanjoBot
         /// </summary>
         private async Task InitialiseCommands()
         {
-            _commandMap.Add(_bot);
-            _commandMap.Add(_databaseController);
-            _commandMap.Add(_commands);
-        
-            _bot.MessageReceived += HandleCommand;
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
+            var serviceProvider = ConfigureServices();
+            _handler = new CommandHandler(serviceProvider);
+            await _handler.ConfigureAsync();
+            //_bot.MessageReceived += HandleCommand;
+            //await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
         }
 
-        public async Task HandleCommand(SocketMessage messageParam)
+        private IServiceProvider ConfigureServices()
         {
-            // Don't process the command if it was a System Message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
-            // Create a number to track where the prefix ends and the command begins
-            int argPos = 0;
-            // Determine if the message is a command, based on if it starts with '!' or a mention prefix
-            if (!(message.HasCharPrefix('!', ref argPos))) return;
-            // Create a Command Context
-            var context = new CommandContext(_bot, message);
-            // Execute the command. (result does not indicate a return value, 
-            // rather an object stating if the command executed succesfully)
-            var result = await _commands.ExecuteAsync(context, argPos, _commandMap);
-            if (!result.IsSuccess)
-            {
-                await message.Channel.SendMessageAsync(result.ErrorReason);
-            }
+            var services = new ServiceCollection()
+                .AddSingleton(_bot)
+                .AddSingleton(new CommandService(new CommandServiceConfig {CaseSensitiveCommands = false, ThrowOnError = false}));
+                //.AddSingleton(LogAdaptor.CreateLogger())
+                //.AddSingleton<LogAdaptor>()
+                //.AddSingleton<InteractiveService>()
+                //.AddSingleton<TagService>()
+                //.AddSingleton<GitHubService>();
+            var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
+            // Autowire and create these dependencies now
+            //provider.GetService<LogAdaptor>();
+            //provider.GetService<TagService>();
+            //provider.GetService<GitHubService>();
+            return provider;
         }
 
-        private Task Log(LogMessage message) {
-            Console.WriteLine(message.ToString());
-            if(message.Exception != null)
-                Console.WriteLine(message.Exception.Message + "\n" + message.Exception.StackTrace);
-            return Task.CompletedTask;
-        }
+        //public async Task HandleCommand(SocketMessage messageParam)
+        //{
+        //    // Don't process the command if it was a System Message
+        //    var message = messageParam as SocketUserMessage;
+        //    if (message == null) return;
+        //    // Create a number to track where the prefix ends and the command begins
+        //    int argPos = 0;
+        //    // Determine if the message is a command, based on if it starts with '!' or a mention prefix
+        //    if (!(message.HasCharPrefix('!', ref argPos))) return;
+        //    // Create a Command Context
+        //    var context = new CommandContext(_bot, message);
+        //    // Execute the command. (result does not indicate a return value, 
+        //    // rather an object stating if the command executed succesfully)
+        //    var result = await _commands.ExecuteAsync(context, argPos);
+        //    if (!result.IsSuccess)
+        //    {
+        //        await message.Channel.SendMessageAsync(result.ErrorReason);
+        //    }
+        //}
+
+        //private Task Log(LogMessage message) {
+        //    Console.WriteLine(message.ToString());
+        //    if(message.Exception != null)
+        //        Console.WriteLine(message.Exception.Message + "\n" + message.Exception.StackTrace);
+        //    return Task.CompletedTask;
+        //}
 
         private static void GlobalUnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e) {
             Exception ex = default(Exception);
