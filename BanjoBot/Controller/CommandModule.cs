@@ -823,6 +823,15 @@ namespace BanjoBot {
             }
         }
 
+		//private int saltCounter;
+		Random rnd = new Random();
+		[Command("salt"), Summary("How much salt can there be?")]
+		public async Task Salt()
+		{
+			int n = rnd.Next(1, 13);
+			await ReplyAsync("There have been " + n + " :PJSalt: occurrences today");
+		}
+
         public bool CheckModeratorPermission(SocketGuildUser user, LeagueController lc)
         {
             if (lc.League.DiscordInformation.ModeratorRole != null && (user.Roles.Contains(lc.League.DiscordInformation.ModeratorRole) || user.GuildPermissions.Administrator))
