@@ -17,7 +17,7 @@ namespace BanjoBot.Controller {
         private readonly IServiceProvider _provider;
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
-        private readonly ILogger _logger;
+        //private readonly ILogger _logger;
 
         public CommandHandler(IServiceProvider provider) {
             _provider = provider;
@@ -43,6 +43,8 @@ namespace BanjoBot.Controller {
 
             var context = new SocketCommandContext(_client, message);
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
+            if (!result.IsSuccess)
+                await message.Channel.SendMessageAsync(result.ErrorReason);
             //if (result is SearchResult search && !search.IsSuccess)
             //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
             //else if (result is PreconditionResult precondition && !precondition.IsSuccess)

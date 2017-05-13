@@ -14,8 +14,7 @@ using Discord.WebSocket;
 using IChannel = Discord.IChannel;
 
 namespace BanjoBot {
-    public class CommandModule : ModuleBase
-    {
+    public class CommandModule : ModuleBase<SocketCommandContext> {
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
         private DiscordSocketClient _bot;

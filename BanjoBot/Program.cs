@@ -233,20 +233,15 @@ namespace BanjoBot
             var serviceProvider = ConfigureServices();
             _handler = new CommandHandler(serviceProvider);
             await _handler.ConfigureAsync();
-            //_bot.MessageReceived += HandleCommand;
-            //await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
         }
 
         private IServiceProvider ConfigureServices()
         {
             var services = new ServiceCollection()
                 .AddSingleton(_bot)
-                .AddSingleton(new CommandService(new CommandServiceConfig {CaseSensitiveCommands = false, ThrowOnError = false}));
-                //.AddSingleton(LogAdaptor.CreateLogger())
-                //.AddSingleton<LogAdaptor>()
-                //.AddSingleton<InteractiveService>()
-                //.AddSingleton<TagService>()
-                //.AddSingleton<GitHubService>();
+                .AddSingleton(
+                    new CommandService(new CommandServiceConfig {CaseSensitiveCommands = false, ThrowOnError = false}))
+                .AddSingleton(_databaseController);
             var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
             // Autowire and create these dependencies now
             //provider.GetService<LogAdaptor>();
@@ -254,33 +249,6 @@ namespace BanjoBot
             //provider.GetService<GitHubService>();
             return provider;
         }
-
-        //public async Task HandleCommand(SocketMessage messageParam)
-        //{
-        //    // Don't process the command if it was a System Message
-        //    var message = messageParam as SocketUserMessage;
-        //    if (message == null) return;
-        //    // Create a number to track where the prefix ends and the command begins
-        //    int argPos = 0;
-        //    // Determine if the message is a command, based on if it starts with '!' or a mention prefix
-        //    if (!(message.HasCharPrefix('!', ref argPos))) return;
-        //    // Create a Command Context
-        //    var context = new CommandContext(_bot, message);
-        //    // Execute the command. (result does not indicate a return value, 
-        //    // rather an object stating if the command executed succesfully)
-        //    var result = await _commands.ExecuteAsync(context, argPos);
-        //    if (!result.IsSuccess)
-        //    {
-        //        await message.Channel.SendMessageAsync(result.ErrorReason);
-        //    }
-        //}
-
-        //private Task Log(LogMessage message) {
-        //    Console.WriteLine(message.ToString());
-        //    if(message.Exception != null)
-        //        Console.WriteLine(message.Exception.Message + "\n" + message.Exception.StackTrace);
-        //    return Task.CompletedTask;
-        //}
 
         private static void GlobalUnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e) {
             Exception ex = default(Exception);
