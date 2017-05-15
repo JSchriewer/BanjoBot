@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Threading.Tasks;
 using BanjoBot.model;
 using Discord;
@@ -834,10 +835,18 @@ namespace BanjoBot
 
             await CloseDiscordGame(startedGame, Teams.Draw);
 
-            Lobby lobby;
+            Lobby lobby = null;
             if (!LobbyExists())
             {
-                lobby = await HostGame(startedGame.Host);
+                foreach (var player in startedGame.WaitingList)
+                {
+                    if (playerToRemove != player.User)
+                    {
+                        lobby = await HostGame(player);
+                        break;
+                    }
+                }
+                
             }
             else
             {
@@ -845,16 +854,16 @@ namespace BanjoBot
             }
 
             string message = "";
-            if (lobby.WaitingList.Count == 1)
+            if (League.DiscordInformation.LeagueRole != null)
+                message = League.DiscordInformation.LeagueRole.Mention;
+
+            if (lobby?.WaitingList.Count == 1)
             {
                 foreach (var player in startedGame.WaitingList)
                 {
                     if (player.User.Id != playerToRemove.Id && !Lobby.WaitingList.Contains(player))
                         Lobby.AddPlayer(player);
                 }
-
-                if (League.DiscordInformation.LeagueRole != null)
-                    message = League.DiscordInformation.LeagueRole.Mention;
                 message += " Game BBL#" + startedGame.GameNumber + " ended in a Draw!\n Lobby got recreated  (" +
                            Lobby.WaitingList.Count() + "/8)";
             }
