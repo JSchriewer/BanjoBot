@@ -22,6 +22,7 @@ namespace BanjoBot {
         private DatabaseController _database;
         private CommandService _commandService;
 		private Random rnd = new Random();
+        private Dictionary<ulong, IUserMessage> _signups = new Dictionary<ulong, IUserMessage>();
 
         public CommandModule(DatabaseController databaseController, DiscordSocketClient bot, CommandService commandService)
         {
@@ -256,10 +257,6 @@ namespace BanjoBot {
                 await _database.InsertNewPlayer(player);
 
             }
-            else
-            {
-                player.User = (SocketGuildUser) Context.User;
-            }
 
             if (lc.League.DiscordInformation.AutoAccept)
             {
@@ -275,6 +272,7 @@ namespace BanjoBot {
                 if (lc.League.DiscordInformation.ModeratorChannel != null)
                 {
                     IUserMessage message = await((ITextChannel) lc.League.DiscordInformation.ModeratorChannel).SendMessageAsync("New applicant: " + player.User.Mention + "\t" + STEAM_PROFILE_URL + player.SteamID +"\tLeague: " + lc.League.Name);
+                    _signups.Add(player.User.Id, message);
                     await message.PinAsync();
                 }
             }
@@ -409,11 +407,10 @@ namespace BanjoBot {
             }
 
             await lc.RegisterPlayer(player);
-            await _database.RegisterPlayerToLeague(player, lc.League);
-            await _database.UpdatePlayerStats(player, player.GetLeagueStat(lc.League.LeagueID, lc.League.Season));
-
             await ReplyAsync(player.User.Mention + "You got a private message!");
-            await (await (player.User as IGuildUser).CreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got approved.\nYou can now start playing!\n\n If you need help, ask a moderator or use !help\n\n Note: Please make sure you read the Rules: \n" + RULE_URL);
+            await (await (player.User as IGuildUser).CreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got approved.\nYou can now start playing!\n\n If you need help, ask a moderator or use !help \n\n Note: Please make sure you read the rules, you can find them in the channel #rules\n");
+            await _signups[player.User.Id].UnpinAsync();
+            _signups.Remove(player.User.Id);
         }
 
         [Command("decline"), Summary("Declines a applicant. !decline <#league-channel> <@player> <reasoning> (moderator)")]

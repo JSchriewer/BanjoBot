@@ -253,6 +253,7 @@ namespace BanjoBot
                 "Insert into players (discord_id, steam_id) Values (@discordID,@steamID) ON DUPLICATE KEY UPDATE steam_id=@steamID";
             command.Parameters.AddWithValue("@steamID", player.SteamID);
             command.Parameters.AddWithValue("@discordID", player.User.Id);
+            Console.WriteLine("New player signed up (" + player.User.Username + ")");
             await ExecuteNoQuery(command);
         }
 

@@ -44,7 +44,7 @@ namespace BanjoBot.Controller {
             var context = new SocketCommandContext(_client, message);
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
             if (!result.IsSuccess)
-                await message.Channel.SendMessageAsync(result.ErrorReason);
+                Console.WriteLine(result.ErrorReason);
             //if (result is SearchResult search && !search.IsSuccess)
             //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
             //else if (result is PreconditionResult precondition && !precondition.IsSuccess)
