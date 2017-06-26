@@ -87,7 +87,7 @@ namespace BanjoBot {
         }
 
         [Command("showstats"), Summary("Shows the stats of a player (option: @player)"), Alias(new string[] { "stats", "gs" }), RequireLeaguePermission]
-        public async Task ShowStats([Summary("@Player")]IGuildUser guildUser, int season = -1) {
+        public async Task ShowStats([Summary("@Player")]IGuildUser guildUser = null, int season = -1) {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = null;
@@ -100,6 +100,7 @@ namespace BanjoBot {
                 player = lc.League.GetPlayerByDiscordID(guildUser.Id);
             }
 
+            Console.WriteLine(player.discordID);
             await lc.ShowStats(Context.Channel, player, season);
         }
 

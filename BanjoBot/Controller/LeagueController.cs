@@ -452,7 +452,7 @@ namespace BanjoBot
             if (Lobby.Host != player) { 
                 await SendTempMessage(textChannel, player.User.Mention + " only the host (" + Lobby.Host.User.Username + ") can start the game.");
                 return;
-            }else if (Lobby.WaitingList.Count < 1) { 
+            }else if (Lobby.WaitingList.Count < 8) { 
                 await SendTempMessage(textChannel, player.User.Mention + " you need 8 players to start the game.");
                 return;
             }
@@ -669,6 +669,9 @@ namespace BanjoBot
         /// <param name="user">Users whos stats will be displayed.</param>
         public async Task ShowStats(IMessageChannel textChannel, Player player, int season)
         {
+            if (season <= 0)
+                season = League.Season;
+
             PlayerStats stats = player.GetLeagueStat(League.LeagueID, season);
             if (stats == null)
             {
@@ -726,6 +729,7 @@ namespace BanjoBot
             }
             PlayerStats playerStats = player.GetLeagueStat(League.LeagueID, season);
 
+            int statCount = statsRecorded;
             // prevents null division
             if (statsRecorded == 0)
                 statsRecorded = 1;
@@ -753,7 +757,7 @@ namespace BanjoBot
             message += $"{"Points",-24} {points/statsRecorded,-12:N} \n";
             message += $"{"PosT",-24} {post/statsRecorded,-12:N} \n";
             message += $"{"TAG",-24} {tag/statsRecorded,-12:N} \n`";
-            message += $"\n*Stats for {statsRecorded} of {playerStats.MatchCount} games were recorded*";
+            message += $"\n*Stats for {statCount} of {playerStats.MatchCount} games were recorded*";
 
             await SendPrivateMessage(player.User as IGuildUser,message);
         }

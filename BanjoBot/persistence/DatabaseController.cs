@@ -12,7 +12,7 @@ namespace BanjoBot
 {
     public class DatabaseController
     {
-        private string _connectionString = "server=127.0.0.1;uid=banjo_admin;pwd=D2bblXX!;database=banjoballtest;";
+        private string _connectionString = "server=127.0.0.1;uid=banjo_admin;pwd=D2bblXX!;database=banjoball;";
 
         public async Task<int> ExecuteNoQuery(MySqlCommand command)
         {

@@ -19,7 +19,7 @@ namespace BanjoBot
         //TODO: Crash recovery http://stackoverflow.com/questions/5302585/crash-recovery-in-application
         //TODO: cant connect, retry
         private static readonly ILog log = LogManager.GetLogger(typeof(Program));
-        private const String TOKEN = "MjU1NDQ1NzU4Mjk4NDIzMjk3.C9Jh4w.I4-UxgqN7m_nzN3qYpIGP-IO9WE";
+        private const String TOKEN = "XXXXXXXXXXXXXX";
         private DiscordSocketClient _bot;
         private List<SocketGuild> _connectedServers;
         private List<SocketGuild> _initialisedServers;
@@ -92,6 +92,7 @@ namespace BanjoBot
                 }
                 
             }
+
             Console.WriteLine("done!");
 
             Console.Write("Load Applicants...");
@@ -182,13 +183,35 @@ namespace BanjoBot
                     }   
                 }
 
+                List<Player> deletedDiscordAccounts = new List<Player>();
                 foreach (var player in lc.League.RegisteredPlayers)
                 {
-                    player.User = server.GetUser(player.discordID);
+                    SocketGuildUser user = server.GetUser(player.discordID);
+                    if(user == null)
+                    {
+                        deletedDiscordAccounts.Add(player);
+                    }
+                    else
+                    {
+                        player.User = user;
+                    }              
                 }
 
                 foreach (var player in lc.League.Applicants) {
-                    player.User = server.GetUser(player.discordID);
+                    SocketGuildUser user = server.GetUser(player.discordID);
+                    if (user == null)
+                    {
+                        deletedDiscordAccounts.Add(player);
+                    }
+                    else
+                    {
+                        player.User = user;
+                    }
+                }
+
+                foreach(Player player in deletedDiscordAccounts)
+                {
+                    lc.League.RegisteredPlayers.Remove(player);
                 }
             }
             _initialisedServers.Add(server);

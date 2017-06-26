@@ -30,9 +30,11 @@ namespace BanjoBot {
         {
             foreach (Player player in RegisteredPlayers)
             {
-                if (player.User.Id == id)
+                if (player.User.Id == id) {
                     return player;
+                }
             }
+            
             return null;
         }
 
