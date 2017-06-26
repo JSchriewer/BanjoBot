@@ -829,7 +829,7 @@ namespace BanjoBot {
 		public async Task Salt()
 		{
 			int n = rnd.Next(1, 13);
-			await ReplyAsync("There have been " + n + " :PJSalt: occurrences today");
+			await ReplyAsync("There have been " + n + " <:PJSalt:300736349596811265> occurrences today");
 		}
 
 		// By Grammis' request )))
