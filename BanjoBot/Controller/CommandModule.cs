@@ -100,8 +100,7 @@ namespace BanjoBot {
             {
                 player = lc.League.GetPlayerByDiscordID(guildUser.Id);
             }
-
-            Console.WriteLine(player.discordID);
+            
             await lc.ShowStats(Context.Channel, player, season);
         }
 
@@ -271,6 +270,7 @@ namespace BanjoBot {
                 await ReplyAsync("You are signed up now. Wait for the approval by a moderator");
                 if (lc.League.DiscordInformation.ModeratorChannel != null)
                 {
+                    //TODO: _signups is not working correctly
                     IUserMessage message = await((ITextChannel) lc.League.DiscordInformation.ModeratorChannel).SendMessageAsync("New applicant: " + player.User.Mention + "\t" + STEAM_PROFILE_URL + player.SteamID +"\tLeague: " + lc.League.Name);
                     _signups.Add(player.User.Id, message);
                     await message.PinAsync();
@@ -288,14 +288,14 @@ namespace BanjoBot {
                 count++;
                 s += String.Format("{0,-18} {1,-12}\n", command.Name, command.Summary);
                 if (count % 15 == 0) {
-                    await (await Context.User.CreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+                    await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
                     count = 0;
                     s = "";
                 }
         
             }
 
-            await (await Context.User.CreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+            await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
         }
 
     
@@ -354,28 +354,31 @@ namespace BanjoBot {
             await lc.KickPlayer(Context.Channel, player);
         }
 
-        [Command("changeSteam"), Summary("Changes the steamID of a user. !cs @player (moderator)"), Alias(new string[] { "cs" })]
-        public async Task ChangeSteam([Summary("@Player")]IGuildUser guildUser, ulong SteamID)
-        {
-            bool hasPermission = false;
-            foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer((SocketGuild)Context.Guild)) {
-                if (CheckModeratorPermission((SocketGuildUser)Context.User, lc)) {
-                    hasPermission = true;
-                }
-            }
-            if (!hasPermission) {
-                return;
-            }
+        //TODO: Cascade 
 
-            Player player = _leagueCoordinator.GetPlayerByDiscordID(guildUser.Id);
-            if (player == null) {
-                await ReplyAsync("Player not found");
-                return;
-            }
+        //[Command("changeSteam"), Summary("Changes the steamID of a user. !cs @player (moderator)"), Alias(new string[] { "cs" })]
+        //public async Task ChangeSteam([Summary("@Player")]IGuildUser guildUser, ulong SteamID)
+        //{
+        //    bool hasPermission = false;
+        //    foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer((SocketGuild)Context.Guild)) {
+        //        if (CheckModeratorPermission((SocketGuildUser)Context.User, lc)) {
+        //            hasPermission = true;
+        //        }
+        //    }
+        //    if (!hasPermission) {
+        //        return;
+        //    }
 
-            player.SteamID = SteamID;
-            await ReplyAsync("SteamID changed");
-        }
+        //    Player player = _leagueCoordinator.GetPlayerByDiscordID(guildUser.Id);
+        //    if (player == null) {
+        //        await ReplyAsync("Player not found");
+        //        return;
+        //    }
+
+        //    player.SteamID = SteamID;
+        //    await _database.UpdatePlayer(player);
+        //    await ReplyAsync("SteamID changed");
+        //}
 
 
 
@@ -408,7 +411,7 @@ namespace BanjoBot {
 
             await lc.RegisterPlayer(player);
             await ReplyAsync(player.User.Mention + "You got a private message!");
-            await (await (player.User as IGuildUser).CreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got approved.\nYou can now start playing!\n\n If you need help, ask a moderator or use !help \n\n Note: Please make sure you read the rules, you can find them in the channel #rules\n");
+            await (await (player.User as IGuildUser).GetOrCreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got approved.\nYou can now start playing!\n\n If you need help, ask a moderator or use !help \n\n Note: Please make sure you read the rules, you can find them in the channel #rules\n");
             await _signups[player.User.Id].UnpinAsync();
             _signups.Remove(player.User.Id);
         }
@@ -455,9 +458,9 @@ namespace BanjoBot {
 
             await ReplyAsync(player.User.Mention + "You got a private message!");
             if(!reasoning.Equals(""))
-                await (await (player.User as IGuildUser).CreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got declined.\n Reason: " +  reasoning +"\nTry again or contact a moderator");
+                await (await (player.User as IGuildUser).GetOrCreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got declined.\n Reason: " +  reasoning +"\nTry again or contact a moderator");
             else
-                await (await (player.User as IGuildUser).CreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got declined.\nTry again or contact a moderator");
+                await (await (player.User as IGuildUser).GetOrCreateDMChannelAsync()).SendMessageAsync("Your registration for " + lc.League.Name + " got declined.\nTry again or contact a moderator");
         }
 
         [Command("listleagues"), Summary("Shows all leagues (moderator)")]
@@ -522,9 +525,22 @@ namespace BanjoBot {
             await ReplyAsync("```" + s + "```");
         }
 
+        [Command("whois"), Summary("finds username by discord-id")]
+        public async Task WhoIs(ulong id)
+        {
+            var user = _bot.GetUser(id);
+            if(user == null)
+            {
+                await Context.Channel.SendMessageAsync("User not found");
+            } else
+            {
+                await Context.Channel.SendMessageAsync(user.Username);
+            }
+        }
+
         [Command("listplayers"), Summary("Lists all applicants (Moderator)")]
         public async Task ListPlayer([Summary("#Channel")]IChannel channel) {
-
+            //TODO: caused crash
             bool hasPermission = false;
             foreach (var leaguecontroller in _leagueCoordinator.GetLeagueControllersByServer((SocketGuild)Context.Guild)) {
                 if (CheckModeratorPermission((SocketGuildUser)Context.User, leaguecontroller)) {
@@ -542,6 +558,18 @@ namespace BanjoBot {
                 return;
             }
 
+            //foreach(var player in lc.League.RegisteredPlayers)
+            //{
+            //    PlayerStats Stats = player.GetLeagueStat(lc.League.LeagueID, lc.League.Season);
+            //    if(Stats == null)
+            //    {
+            //        PlayerStats stats = new PlayerStats(lc.League.LeagueID, lc.League.Season);
+            //        player.PlayerStats.Add(stats);
+            //        await _database.UpdatePlayerStats(player, stats);
+            //    }
+            //}
+
+            Console.WriteLine("listplayers");
             object[] args = new object[] {"DiscordID", "Name", "SteamID", "Matches", "M+D", "Wins","Losses","Mmr"};
             String s = String.Format(
                 "{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8}\n", args);
@@ -549,6 +577,7 @@ namespace BanjoBot {
 
             foreach (var player in lc.League.RegisteredPlayers)
             {
+                Console.Write("player: " +player.discordID + " steam: " +player.SteamID);
                 if (s.Length > 1800)
                 {          
                     await ReplyAsync("```" + s + "```");
@@ -561,8 +590,11 @@ namespace BanjoBot {
                     player.User.Id, name, player.SteamID,Stats.MatchCount,
                     player.Matches.Count,Stats.Wins, Stats.Losses, Stats.MMR
                 };
+
                 s += String.Format("{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-10} {6,-8}{7,-8}\n", args);
-               
+                Console.Write("... done \n");
+
+
             }
                 
             await ReplyAsync("```" + s + "```");
@@ -859,7 +891,7 @@ namespace BanjoBot {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)context.Channel;   
             LeagueController lc = LeagueCoordinator.Instance.GetLeagueController(socketGuildChannel);
             if (lc == null) {
-                await context.Channel.SendMessageAsync("Join a league channel and try again");
+                await context.Channel.SendMessageAsync("Join a league channel and try again");//TODO: redundanz RequireLeagueChannel
                 return PreconditionResult.FromError("Join a league channel and try again");
             }
 

@@ -8,10 +8,12 @@ using Discord.Commands;
 using Discord.WebSocket;
 using log4net.Core;
 using log4net.Repository.Hierarchy;
+using log4net;
 
 namespace BanjoBot.Controller {
     class CommandHandler
     {
+        private static readonly ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private const string PREFIX = "!";
 
         private readonly IServiceProvider _provider;
@@ -42,9 +44,10 @@ namespace BanjoBot.Controller {
             if (!ParseTriggers(message, ref argPos)) return;
 
             var context = new SocketCommandContext(_client, message);
+            log.Info(message.Author.Username + ": " + message);
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
             if (!result.IsSuccess)
-                Console.WriteLine(result.ErrorReason);
+                log.Info(result.ErrorReason);
             //if (result is SearchResult search && !search.IsSuccess)
             //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
             //else if (result is PreconditionResult precondition && !precondition.IsSuccess)

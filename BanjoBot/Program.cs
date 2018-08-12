@@ -16,9 +16,7 @@ namespace BanjoBot
 {
     public class Program
     {
-        //TODO: Crash recovery http://stackoverflow.com/questions/5302585/crash-recovery-in-application
-        //TODO: cant connect, retry
-        private static readonly ILog log = LogManager.GetLogger(typeof(Program));
+        private static readonly ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private const String TOKEN = "XXXXXXXXXXXXXX";
         private DiscordSocketClient _bot;
         private List<SocketGuild> _connectedServers;
@@ -26,7 +24,7 @@ namespace BanjoBot
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _databaseController;
         private CommandHandler _handler;
-        private SocketServer _socketServer;
+        //private SocketServer _socketServer;
 
         [STAThread]
         public static void Main(string[] args)
@@ -41,10 +39,10 @@ namespace BanjoBot
             _bot = new DiscordSocketClient(new DiscordSocketConfig
                 {
                     LogLevel = LogSeverity.Debug
-                    
                 });
-            
+
             //_bot.Log += Log;
+            _bot.Log += bot_Log;
             _bot.GuildAvailable += ServerConnected;
             _bot.GuildUnavailable += ServerDisconnected;
             _bot.MessageReceived += BotOnMessageReceived;
@@ -59,13 +57,13 @@ namespace BanjoBot
             await LoadLeagueInformation();
             await LoadPlayerBase();
             await LoadMatchHistory();
-            _socketServer = new SocketServer(_leagueCoordinator, _databaseController);
-
+            //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
+            
             await _bot.LoginAsync(TokenType.Bot, TOKEN);
             await _bot.StartAsync();
             await Task.Delay(-1);
         }
-       
+
         private async Task LoadLeagueInformation()
         {
      
@@ -172,6 +170,9 @@ namespace BanjoBot
 
         private async Task UpdateDiscordInformation(SocketGuild server)
         {
+            //TODO: Gets called on reconnect
+            //What happens if you leave and reconnect to the server? with or without a bot restart?
+            //server.GetUser != _bot.GetUser
             Console.Write("Update discord information " + server.Name + "(" + server.Id + ")...");
             foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer(server))
             {
@@ -273,11 +274,17 @@ namespace BanjoBot
             return provider;
         }
 
-        private static void GlobalUnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e) {
+        private async Task bot_Log(LogMessage arg)
+        {
+            log.Debug(arg.Message);
+        }
+
+        private static void GlobalUnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
+        {
             Exception ex = default(Exception);
             ex = (Exception)e.ExceptionObject;
             log.Error(ex.Message + "\n" + ex.StackTrace);
-            Console.WriteLine("Fatal Error" + ex.Message + "\n Stacktrace:\n" + ex.StackTrace);
+            Console.WriteLine("[" + System.DateTime.Now + "]" + "Fatal Error " + ex.Message + "\n Stacktrace:\n" + ex.StackTrace);
         }
     }
 }

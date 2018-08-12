@@ -249,6 +249,7 @@ namespace BanjoBot
 
         private async void printGameResult(Lobby game, int mmr, Teams winnerTeam, ITextChannel textChannel) {
             string message = "Closing lobby\n";
+            //TODO: +-24
 
             switch (winnerTeam) {
                 case Teams.Red:
@@ -944,7 +945,7 @@ namespace BanjoBot
 
         private async Task SendPrivateMessage(IGuildUser user, String message) {
             if(League.HasDiscord())
-                await (await user.CreateDMChannelAsync()).SendMessageAsync(message);
+                await (await user.GetOrCreateDMChannelAsync()).SendMessageAsync(message);
 
         }
 

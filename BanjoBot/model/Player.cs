@@ -24,6 +24,7 @@ namespace BanjoBot
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
             Matches = new List<PlayerMatchStats>();
+            discordID = User.Id;
         }
 
         public Player(ulong steamid) {
@@ -61,7 +62,11 @@ namespace BanjoBot
                 if (leagueStat.LeagueID == leagueID && leagueStat.Season == season)
                     return leagueStat;
             }
-            return null;
+
+            //TODO: ugly af, Bug in !top command causes nullpointer when no stats for current season are recorded
+            PlayerStats stats = new PlayerStats(leagueID, season);
+            PlayerStats.Add(new PlayerStats(leagueID, season));
+            return stats;
         }
 
         public List<PlayerMatchStats> GetMatchesBySeason(int leagueID, int season)

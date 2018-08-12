@@ -12,7 +12,7 @@ namespace BanjoBot
 {
     public class DatabaseController
     {
-        private string _connectionString = "server=127.0.0.1;uid=banjo_admin;pwd=D2bblXX!;database=banjoball;";
+        private string _connectionString = "server=127.0.0.1;uid=banjo_admin;pwd=D2bblXX;database=banjoball;";
 
         public async Task<int> ExecuteNoQuery(MySqlCommand command)
         {
@@ -257,6 +257,17 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
         }
 
+        public async Task UpdatePlayer(Player player)
+        {
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "Update players where discord_id=@discordID set steam_id=@steamID";
+            command.Parameters.AddWithValue("@steamID", player.SteamID);
+            command.Parameters.AddWithValue("@discordID", player.User.Id);
+            Console.WriteLine("Change steamID (" + player.User.Username + ")");
+            await ExecuteNoQuery(command);
+        }
+
         public async Task RegisterPlayerToLeague(Player player, League league)
         {
             MySqlCommand command = new MySqlCommand();
@@ -380,6 +391,7 @@ namespace BanjoBot
             return leagues;
 
         }
+
 
         public async Task<List<Player>> GetPlayerBase(LeagueCoordinator server)
         {
