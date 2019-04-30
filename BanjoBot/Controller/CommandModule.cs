@@ -892,7 +892,7 @@ namespace BanjoBot {
 		{
             if (user == null) {
                 await ReplyAsync("Missing user's name");
-            } else if (user.)
+            }
 			int n = rnd.Next(1, 20);
 			String d = new String('=', n);
 			await ReplyAsync("Size: 8" + d + "D");
