@@ -818,6 +818,8 @@ namespace BanjoBot {
             {
                 repsondChannel = (IMessageChannel) socketGuildChannel;
             }
+            // Reset the salt counter for the season
+            saltCounter = 0;
             await lc.StartNewSeason(repsondChannel);
             
         }
@@ -845,12 +847,35 @@ namespace BanjoBot {
             }
         }
 
+        private int saltCounter = 0;
+        private String saltIcon = "<:PJSalt:300736349596811265>";
 		//private int saltCounter;
 		[Command("salt"), Summary("How much salt can there be?")]
 		public async Task Salt()
 		{
-			int n = rnd.Next(1, 13);
-			await ReplyAsync("There have been " + n + " <:PJSalt:300736349596811265> occurrences today");
+            saltCounter = saltCounter + 1;
+            switch (saltCounter)
+            {
+                case 69:
+                    await ReplyAsync("Well, baby, me so horny. Me so HORNY{1}. Me love you long time. You party{1}?", saltCounter, saltIcon);
+                    break;
+                case 666:
+                    for (int i = 0; i < 6; i++) {
+                        await ReplyAsync("6{1} 6{1} 6{1}" +
+                        "\nWoe to you, oh earth and sea" +
+                        "\nFor the Devil sends the beast with wrath" +
+                        "\nBecause he knows the time is short" +
+                        "\nLet him who hath understanding" +
+                        "\nReckon the number of the beast" +
+                        "\nFor it is a human number" +
+                        "\nIts number is six hundred and sixty six" +
+                        "\n6{1} 6{1} 6{1}", saltCounter, saltIcon);
+                    }
+                    break;
+                default:
+                    await ReplyAsync("There have been {0} {1} occurrences this season", saltCounter, saltIcon);
+                    break;
+            }
 		}
 
 		// By Grammis' request )))
