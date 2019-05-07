@@ -114,7 +114,7 @@ namespace BanjoBot {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(Context.User.Id);
-            await lc.StartGame(Context.Channel, player);
+            await lc.StartDiscordGame(Context.Channel, player);
         }
 
         [Command("lobby"), Summary("Shows the players that have joined the open game"), Alias(new string[] { "list" }), RequireLeagueChannel]
@@ -823,15 +823,7 @@ namespace BanjoBot {
             await lc.StartNewSeason(repsondChannel);
             
         }
-
-
-        [Command("hey"), Summary("Hey.")]
-        public async Task Say()
-        {
-            await ReplyAsync("Fuck you");
-        }
-
-
+    
         // Fundamental commands by prospekt
         [Command("increasemmr"), Summary("Increases MMR of <user> by the specified <mmr>")]
         public async Task IncreaseMeme([Summary("@Player")]IGuildUser user, [Summary("mmr")]int mmr)
@@ -847,9 +839,9 @@ namespace BanjoBot {
             }
         }
 
+
         private int saltCounter = 0;
         private String saltIcon = "<:PJSalt:300736349596811265>";
-		//private int saltCounter;
 		[Command("salt"), Summary("How much salt can there be?")]
 		public async Task Salt()
 		{
@@ -857,11 +849,11 @@ namespace BanjoBot {
             switch (saltCounter)
             {
                 case 69:
-                    await ReplyAsync("Well, baby, me so horny. Me so HORNY{1}. Me love you long time. You party{1}?", saltCounter, saltIcon);
+                    await ReplyAsync(String.Format("Well, baby, me so horny. Me so HORNY{1}. Me love you long time. You party{1}?", saltCounter, saltIcon));
                     break;
                 case 666:
                     for (int i = 0; i < 6; i++) {
-                        await ReplyAsync("6{1} 6{1} 6{1}" +
+                        await ReplyAsync(String.Format("6{1} 6{1} 6{1}" +
                         "\nWoe to you, oh earth and sea" +
                         "\nFor the Devil sends the beast with wrath" +
                         "\nBecause he knows the time is short" +
@@ -869,16 +861,15 @@ namespace BanjoBot {
                         "\nReckon the number of the beast" +
                         "\nFor it is a human number" +
                         "\nIts number is six hundred and sixty six" +
-                        "\n6{1} 6{1} 6{1}", saltCounter, saltIcon);
+                        "\n6{1} 6{1} 6{1}", saltCounter, saltIcon));
                     }
                     break;
                 default:
-                    await ReplyAsync("There have been {0} {1} occurrences this season", saltCounter, saltIcon);
+                    await ReplyAsync(String.Format("There have been {0} {1} occurrences this season", saltCounter, saltIcon));
                     break;
             }
 		}
 
-		// By Grammis' request )))
 		[Command("penis"), Summary("How big is the schlong of <user>")]
 		public async Task Willy([Summary("@Player")]IGuildUser user)
 		{
@@ -922,7 +913,6 @@ namespace BanjoBot {
             return PreconditionResult.FromError("You are not registered. Sign up with !register <YourSteamID64> <#league-channel>");
         }
     }
-
 
     public class RequireLeagueChannel : PreconditionAttribute {
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider map) {
