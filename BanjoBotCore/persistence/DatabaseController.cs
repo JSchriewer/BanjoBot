@@ -1,21 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Text;
 using System.Threading.Tasks;
-using Discord.Commands;
-using Discord.WebSocket;
+using log4net;
+using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
+using Microsoft.Extensions.DependencyInjection;
+using BanjoBotCore.persistence;
 
 namespace BanjoBot
 {
-    public class DatabaseController
+    public class DatabaseController 
     {
-        private string _connectionString = "server=127.0.0.1;uid=banjo_admin;pwd=D2bblXX;database=banjoball;";
+        private static readonly ILog log = log4net.LogManager.GetLogger(typeof(DatabaseController));
+        private string _connectionString = "server=127.0.0.1;database=banjoball;user=banjo_admin;pwd=D2bblXX;";
+
+
+        //public DatabaseController(IServiceProvider serviceProvider) 
+        //{
+        //    IConfiguration config = serviceProvider.GetService<IConfiguration>();
+            
+        //    _connectionString = config.GetValue<String>("DbConnectionString");
+
+        //}
+        public DatabaseController()
+        {
+
+        }
 
         public async Task<int> ExecuteNoQuery(MySqlCommand command)
         {
+            //log.Debug("ExecuteNoQuery: " + command.CommandText);
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -29,7 +44,7 @@ namespace BanjoBot
             catch (Exception e)
             {
                 connection.Close();
-                Console.WriteLine(e.Message);
+                log.Error(e.InnerException + "| " + e.Message);
             }
 
             return 0;
@@ -37,6 +52,7 @@ namespace BanjoBot
 
         public async Task<int> ExecuteScalar(MySqlCommand command)
         {
+            //log.Debug("ExecuteScalar: " + command.CommandText);
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -50,7 +66,7 @@ namespace BanjoBot
             catch (Exception e)
             {
                 connection.Close();
-                Console.WriteLine(e.Message);
+                log.Error(e.InnerException + "| " + e.Message);
             }
 
             return 0;
@@ -58,6 +74,7 @@ namespace BanjoBot
 
         public async Task<MySqlDataReader> ExecuteReader(MySqlCommand command)
         {
+            //log.Debug("ExecuteReader: " + command.CommandText);
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -71,7 +88,7 @@ namespace BanjoBot
             catch (Exception e)
             {
                 connection.Close();
-                Console.WriteLine(e.Message);
+                log.Error(e.InnerException + "| " + e.Message);
             }
 
             return null;
@@ -79,6 +96,7 @@ namespace BanjoBot
 
         public async Task UpdateMatchResult(MatchResult game)
         {
+            log.Debug("UpdateMatchResult");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "update matches set duration=@duration, date=@date, winner=@winner, steam_match_id=@steam_match_id, stats_recorded=@stats_recorded where match_id=@match_id";
@@ -134,45 +152,11 @@ namespace BanjoBot
 
         }
         
-        public async Task<int> InsertNewMatch(int leagueID, int season, List<Player> blueteam, List<Player> redteam)
-        {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText =
-                "Insert into matches (season, league_id, date) Values (@season,@league_id,@date); SELECT LAST_INSERT_ID()";
-            command.Parameters.AddWithValue("@season", season);
-            command.Parameters.AddWithValue("@league_id", leagueID);
-            command.Parameters.AddWithValue("@date", DateTime.Now);
-            int matchID = await ExecuteScalar(command);
-
-            StringBuilder queryBuilder = new StringBuilder("Insert into match_player_stats (steam_id,match_id, team) VALUES ");
-            List<Player> allPlayers = new List<Player>();
-            allPlayers.AddRange(blueteam);
-            allPlayers.AddRange(redteam);
-            for (int i = 0; i < allPlayers.Count; i++)
-            {
-                queryBuilder.AppendFormat("(@steam_id{0},@match_id{0},@team{0}),", i);
-                if (i == allPlayers.Count - 1)
-                {
-                    queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
-                }
-            }
-
-            command = new MySqlCommand(queryBuilder.ToString());
-            //assign each parameter its value
-            for (int i = 0; i < allPlayers.Count; i++) {
-                Teams team = blueteam.Contains(allPlayers[i]) ? Teams.Blue : Teams.Red;
-                command.Parameters.AddWithValue("@steam_id" + i, allPlayers[i].SteamID);
-                command.Parameters.AddWithValue("@match_id" + i, matchID);
-                command.Parameters.AddWithValue("@team" + i, team);
-            }
-
-            await ExecuteNoQuery(command);
-
-            return matchID;
-        }
+        
 
         public async Task DrawMatch(int matchID)
         {
+            log.Debug("DrawMatch");
             MySqlCommand command = new MySqlCommand();
             command.CommandText = "update matches set winner=@winner where match_id=@match_id";
             command.Parameters.AddWithValue("@winner", Teams.Draw);
@@ -187,6 +171,7 @@ namespace BanjoBot
 
         public async Task UpdateLeague(League league)
         {
+            log.Debug("UpdateLeague");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Update leagues Set season=@season,name=@name " +
@@ -230,6 +215,7 @@ namespace BanjoBot
 
         public async Task UpdatePlayerStats(Player player, PlayerStats playerstats)
         {
+            log.Debug("UpdatePlayerStats");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "REPLACE INTO player_stats (league_id,season,steam_id,matches,wins,losses,mmr,streak) Values (@league_id,@season,@steam_id,@matches,@wins,@losses, @mmr,@streak)";
@@ -245,20 +231,10 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
 
         }
-
-        public async Task InsertNewPlayer(Player player)
-        {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText =
-                "Insert into players (discord_id, steam_id) Values (@discordID,@steamID) ON DUPLICATE KEY UPDATE steam_id=@steamID";
-            command.Parameters.AddWithValue("@steamID", player.SteamID);
-            command.Parameters.AddWithValue("@discordID", player.User.Id);
-            Console.WriteLine("New player signed up (" + player.User.Username + ")");
-            await ExecuteNoQuery(command);
-        }
-
+        
         public async Task UpdatePlayer(Player player)
         {
+            log.Debug("UpdatePlayer");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Update players where discord_id=@discordID set steam_id=@steamID";
@@ -268,8 +244,9 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
         }
 
-        public async Task RegisterPlayerToLeague(Player player, League league)
+        public async Task InsertRegistrationToLeague(Player player, League league)
         {
+            log.Debug("Try RegisterPlayerToLeague SteamID(" + player.SteamID + "DiscordID) " + player.User.Id + "UserName(" + player.User.Username + ")");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Insert into players_leagues (steam_id, league_id, approved) Values (@steam_id,@league_id,1) ON DUPLICATE KEY UPDATE approved=1";
@@ -278,19 +255,9 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
         }
 
-
-        public async Task InsertSignupToLeague(ulong steamID, League league)
+        public async Task DeleteRegistration(ulong steamID, League league)
         {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText =
-                "Insert into players_leagues (steam_id, league_id, approved) Values (@steam_id,@league_id,0)";
-            command.Parameters.AddWithValue("@steam_id", steamID);
-            command.Parameters.AddWithValue("@league_id", league.LeagueID);
-            await ExecuteNoQuery(command);
-        }
-
-        public async Task DeclineRegistration(ulong steamID, League league)
-        {
+            log.Debug("DeclineRegistration");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Delete from players_leagues where steam_id=@steam_id AND league_id=@league_id";
@@ -299,8 +266,71 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
         }
 
+        public async Task InsertSignupToLeague(ulong steamID, League league)
+        {
+            log.Debug("InsertSignupToLeague");
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "Insert into players_leagues (steam_id, league_id, approved) Values (@steam_id,@league_id,0)";
+            command.Parameters.AddWithValue("@steam_id", steamID);
+            command.Parameters.AddWithValue("@league_id", league.LeagueID);
+            await ExecuteNoQuery(command);
+        }
+
+        public async Task<int> InsertNewMatch(int leagueID, int season, List<Player> blueteam, List<Player> redteam)
+        {
+            log.Debug("InsertNewMatch");
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "Insert into matches (season, league_id, date) Values (@season,@league_id,@date); SELECT LAST_INSERT_ID()";
+            command.Parameters.AddWithValue("@season", season);
+            command.Parameters.AddWithValue("@league_id", leagueID);
+            command.Parameters.AddWithValue("@date", DateTime.Now);
+            int matchID = await ExecuteScalar(command);
+
+            StringBuilder queryBuilder = new StringBuilder("Insert into match_player_stats (steam_id,match_id, team) VALUES ");
+            List<Player> allPlayers = new List<Player>();
+            allPlayers.AddRange(blueteam);
+            allPlayers.AddRange(redteam);
+            for (int i = 0; i < allPlayers.Count; i++)
+            {
+                queryBuilder.AppendFormat("(@steam_id{0},@match_id{0},@team{0}),", i);
+                if (i == allPlayers.Count - 1)
+                {
+                    queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
+                }
+            }
+
+            command = new MySqlCommand(queryBuilder.ToString());
+            //assign each parameter its value
+            for (int i = 0; i < allPlayers.Count; i++)
+            {
+                Teams team = blueteam.Contains(allPlayers[i]) ? Teams.Blue : Teams.Red;
+                command.Parameters.AddWithValue("@steam_id" + i, allPlayers[i].SteamID);
+                command.Parameters.AddWithValue("@match_id" + i, matchID);
+                command.Parameters.AddWithValue("@team" + i, team);
+            }
+
+            await ExecuteNoQuery(command);
+
+            return matchID;
+        }
+
+        public async Task InsertNewPlayer(Player player)
+        {
+            log.Debug("Try InsertNewPlayer SteamID(" + player.SteamID + ") DiscordID(" + player.User.Id + ") UserName(" + player.User.Username + ")");
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "Insert into players (discord_id, steam_id) Values (@discordID,@steamID) ON DUPLICATE KEY UPDATE steam_id=@steamID";
+            command.Parameters.AddWithValue("@steamID", player.SteamID);
+            command.Parameters.AddWithValue("@discordID", player.User.Id);
+            await ExecuteNoQuery(command);
+            log.Debug("New player inserted = SteamID(" + player.SteamID + ") DiscordID(" + player.User.Id + ")UserName(" + player.User.Username + ")");
+        }
+
         public async Task<int> InsertNewLeague()
         {
+            log.Debug("InsertNewLeague");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Insert into leagues (season) Values (@season);SELECT LAST_INSERT_ID();";
@@ -311,6 +341,7 @@ namespace BanjoBot
 
         public async Task<List<League>> GetLeagues()
         {
+            log.Debug("GetLeagues");
             MySqlCommand command = new MySqlCommand();
             command.CommandText = "select *," +
                                   "(select count(*) from matches m where l.league_id = m.league_id AND l.season = m.season) as match_count" +
@@ -392,9 +423,9 @@ namespace BanjoBot
 
         }
 
-
         public async Task<List<Player>> GetPlayerBase(LeagueCoordinator server)
         {
+            log.Debug("GetPlayerBase");
             List<Player> result = new List<Player>();
             MySqlCommand command = new MySqlCommand();
             int leagueCount = server.LeagueControllers.Count;
@@ -478,6 +509,7 @@ namespace BanjoBot
 
         public async Task<List<Player>> GetApplicants(LeagueCoordinator server, League league)
         {
+            log.Debug("GetApplicants");
             List<Player> result = new List<Player>();
             MySqlCommand command = new MySqlCommand();
             command.CommandText = "Select * from players p " +
@@ -512,6 +544,7 @@ namespace BanjoBot
 
         public async Task<List<MatchResult>> GetMatchHistory(int leagueID)
         {
+            log.Debug("GetMatchHistory");
             List<MatchResult> matches = new List<MatchResult>();
             MySqlCommand command = new MySqlCommand();
             command.CommandText = string.Format("Select * from matches m " +
@@ -648,6 +681,7 @@ namespace BanjoBot
         //TODO: cascade
         public async Task DeleteLeague(League league)
         {
+            log.Debug("DeleteLeague");
             MySqlCommand command = new MySqlCommand();
             command.CommandText = "Delete from leagues where league_id = @league_id";
             command.Parameters.AddWithValue("@league_id", league.LeagueID);

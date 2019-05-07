@@ -1,35 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Discord;
-using Discord.API;
-using Discord.API.Rest;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BanjoBot {
     public class LeagueCoordinator
     {
         private static readonly int PUBLIC_LEAGUE_ID = 25;
-        private static readonly LeagueCoordinator instance = new LeagueCoordinator();
+        ////private readonly IServiceProvider _services;
+        private static readonly LeagueCoordinator INSTANCE = new LeagueCoordinator();
         public List<LeagueController> LeagueControllers { get; set; }
-        
-
-        static LeagueCoordinator() {}
-
+ 
         private LeagueCoordinator()
         {
+            ////_services = serviceProvider;
             LeagueControllers = new List<LeagueController>();
         }
-
+  
         public static LeagueCoordinator Instance
         {
-            get { return instance; }
+            get { return INSTANCE; }
         }
 
         public void AddLeague(League league)
         {
+            ////DatabaseController database = _services.GetService<DatabaseController>();
+            ////LeagueControllers.Add(new LeagueController(league, database));
             LeagueControllers.Add(new LeagueController(league));
         }
 

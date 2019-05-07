@@ -32,7 +32,7 @@ namespace BanjoBot.Controller {
         }
 
         public async Task ConfigureAsync() {
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
 
         private async Task ProcessCommandAsync(SocketMessage pMsg) {
@@ -42,12 +42,12 @@ namespace BanjoBot.Controller {
 
             int argPos = 0;
             if (!ParseTriggers(message, ref argPos)) return;
-
             var context = new SocketCommandContext(_client, message);
             log.Info(message.Author.Username + ": " + message);
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
             if (!result.IsSuccess)
                 log.Info(result.ErrorReason);
+            
             //if (result is SearchResult search && !search.IsSuccess)
             //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
             //else if (result is PreconditionResult precondition && !precondition.IsSuccess)

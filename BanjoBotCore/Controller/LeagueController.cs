@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
 using System.Linq;
-using System.Runtime.Remoting;
 using System.Threading.Tasks;
 using BanjoBot.model;
 using Discord;
-using Discord.Rest;
 using Discord.WebSocket;
+using log4net;
 
 namespace BanjoBot
 {
@@ -18,6 +15,7 @@ namespace BanjoBot
         //TODO: Refactor: Split discord related stuff & controlling
         //TODO: Refactor: Entrypoint for controlling: checkPreconditions() -> Controlling -> SendResultString ->  Controlling
         //^ not its preconditions in start command, some controlling in there "Lobby=null"
+        private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
         public League League;
         private Lobby Lobby { get; set; }
         public List<Lobby> RunningGames { get; set; }
@@ -66,9 +64,12 @@ namespace BanjoBot
         {
             if (League.RegisteredPlayers.Contains(player))
             {
+                log.Debug("Registration failed " + player.User.Username + " is already registered in LeagueController");
                 return;
             }
 
+            log.Debug("RegisterPlayer: " + player.User.Username + "(" + player.User.Id + ")");
+  
             if (League.Applicants.Contains(player))
             {
                 League.Applicants.Remove(player);
@@ -76,7 +77,7 @@ namespace BanjoBot
 
             player.PlayerStats.Add(new PlayerStats(League.LeagueID, League.Season));
             League.RegisteredPlayers.Add(player);
-            await _database.RegisterPlayerToLeague(player, League);
+            await _database.InsertRegistrationToLeague(player, League);
             await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
             await AddDiscordRole(player);
         }
