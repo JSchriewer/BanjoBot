@@ -68,7 +68,7 @@ namespace BanjoBot
             await LoadPlayerBase();
             await LoadMatchHistory();
             
-            String token = _config.GetValue<String>("Token:DiscordTest");
+            String token = _config.GetValue<String>("Token:Discord");
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
             await Task.Delay(-1);

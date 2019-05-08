@@ -254,19 +254,20 @@ namespace BanjoBot
             String blueTeam = "Blue Team (" + Lobby.GetTeamMMR(Teams.Blue) + "): ";
             foreach (var p in Lobby.BlueList)
             {
-                blueTeam += p.User.Nickname + "(" + p.GetLeagueStat(League.LeagueID, League.Season).MMR + ") ";
+                blueTeam += p.User.Mention + "(" + p.GetLeagueStat(League.LeagueID, League.Season).MMR + ") ";
             }
             String redTeam = "Red Team (" + Lobby.GetTeamMMR(Teams.Red) + "): ";
             foreach (var p in Lobby.RedList)
             {
-                redTeam += p.User.Nickname + "(" + p.GetLeagueStat(League.LeagueID, League.Season).MMR + ") ";
+                redTeam += p.User.Mention + "(" + p.GetLeagueStat(League.LeagueID, League.Season).MMR + ") ";
             }
             Lobby.StartMessage = await SendMessage(textChannel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await Lobby.StartMessage.PinAsync();
 
+            String password = Lobby.GeneratePassword(6);
             foreach (var p in Lobby.WaitingList)
             {
-                await SendPrivateMessage(p.User as IGuildUser, Lobby.GetGameName() + " has been started. Password: " + Lobby.GeneratePassword(6));
+                await SendPrivateMessage(p.User as IGuildUser, Lobby.GetGameName() + " has been started. Password: " + password);
             }
 
             Lobby = null;
