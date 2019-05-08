@@ -16,7 +16,7 @@ namespace BanjoBot {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(CommandModule));
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
-        private static int saltCounter = 658;
+        private static int saltCounter = 0;
         private DiscordSocketClient _bot;
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _database;
