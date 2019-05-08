@@ -16,12 +16,13 @@ namespace BanjoBot {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(CommandModule));
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
-
+        private static int saltCounter = 0;
         private DiscordSocketClient _bot;
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _database;
         private CommandService _commandService;
 		private Random rnd = new Random();
+        private String saltIcon = "<:PJSalt:300736349596811265>";
         //TODO: not working, unpin message on accept
         private Dictionary<ulong, IUserMessage> _signups = new Dictionary<ulong, IUserMessage>(); 
 
@@ -839,9 +840,6 @@ namespace BanjoBot {
             }
         }
 
-
-        private int saltCounter = 0;
-        private String saltIcon = "<:PJSalt:300736349596811265>";
 		[Command("salt"), Summary("How much salt can there be?")]
 		public async Task Salt()
 		{

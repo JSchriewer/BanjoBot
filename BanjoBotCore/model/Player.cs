@@ -61,7 +61,7 @@ namespace BanjoBot
         {
             get
             {
-                if (User.Nickname.Equals(""))
+                if (User.Nickname == null)
                     return User.Username;
                 else
                     return User.Nickname;
@@ -74,7 +74,7 @@ namespace BanjoBot
                     return leagueStat;
             }
 
-            //TODO: ugly af, Bug in !top command causes nullpointer when no stats for current season are recorded
+            //Bug workaround !top command causes nullpointer when no stats for current season are recorded
             PlayerStats stats = new PlayerStats(leagueID, season);
             PlayerStats.Add(new PlayerStats(leagueID, season));
             return stats;
