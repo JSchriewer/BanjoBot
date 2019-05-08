@@ -53,8 +53,19 @@ namespace BanjoBot
         public string PlayerMMRString(int leagueID, int season)
         {
 
-            return User.Username + "(" + GetLeagueStat(leagueID, season).MMR + ")";
+            return Name + "(" + GetLeagueStat(leagueID, season).MMR + ")";
 
+        }
+
+        public string Name
+        {
+            get
+            {
+                if (User.Nickname.Equals(""))
+                    return User.Username;
+                else
+                    return User.Nickname;
+            }
         }
 
         public PlayerStats GetLeagueStat(int leagueID, int season) {

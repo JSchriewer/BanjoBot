@@ -63,11 +63,11 @@ namespace BanjoBot
         {
             if (League.RegisteredPlayers.Contains(player))
             {
-                log.Debug("Registration failed " + player.User.Username + " is already registered in LeagueController");
+                log.Debug("Registration failed " + player.Name + " is already registered in LeagueController");
                 return;
             }
 
-            log.Debug("RegisterPlayer: " + player.User.Username + "(" + player.User.Id + ")");
+            log.Debug("RegisterPlayer: " + player.Name + "(" + player.User.Id + ")");
   
             if (League.Applicants.Contains(player))
             {
@@ -237,7 +237,7 @@ namespace BanjoBot
             // If the player who started the game was not the host
             if (Lobby.Host != player)
             {
-                await SendTempMessage(textChannel, player.User.Mention + " only the host (" + Lobby.Host.User.Username + ") can start the game.");
+                await SendTempMessage(textChannel, player.User.Mention + " only the host (" + Lobby.Host.Name + ") can start the game.");
                 return;
             }
             else if (Lobby.WaitingList.Count < 8)
@@ -471,7 +471,7 @@ namespace BanjoBot
             //TODO: refactor
             if (player == Lobby.Host || player.User.Roles.Contains(League.DiscordInformation.ModeratorRole) || player.User.GuildPermissions.Administrator)
             {
-                await SendMessage(textChannel,"Game canceled by host " + player.User.Username + ".");     
+                await SendMessage(textChannel,"Game canceled by host " + player.Name + ".");     
                 await CancelLobby();
             } 
         }
@@ -501,7 +501,7 @@ namespace BanjoBot
             }
             else
             {
-                await SendMessage(textChannel,"Vote recorded to cancel game by " + player.User.Username + " (" + Lobby.CancelCalls.Count() + "/" + Math.Ceiling((double)Lobby.WaitingList.Count() / 2) + ")");
+                await SendMessage(textChannel,"Vote recorded to cancel game by " + player.Name + " (" + Lobby.CancelCalls.Count() + "/" + Math.Ceiling((double)Lobby.WaitingList.Count() / 2) + ")");
             }   
         }
         
@@ -541,7 +541,7 @@ namespace BanjoBot
                     game.BlueWinCalls.Remove(player);
                     game.RedWinCalls.Add(player);
                     await SendTempMessage(textChannel, player.User.Mention + " has changed his Mind");
-                    await SendMessage(textChannel,"Vote recorded for Red team in game " + game.GetGameName() + " by " + player.User.Username + ". (" + game.RedWinCalls.Count() + "/5)");
+                    await SendMessage(textChannel,"Vote recorded for Red team in game " + game.GetGameName() + " by " + player.Name + ". (" + game.RedWinCalls.Count() + "/5)");
                 }
             }
             else if (game.RedWinCalls.Contains(player))
@@ -553,7 +553,7 @@ namespace BanjoBot
                     game.RedWinCalls.Remove(player);
                     game.BlueWinCalls.Add(player);
                     await SendTempMessage(textChannel, player.User.Mention + " has changed his Mind");
-                    await SendMessage(textChannel,"Vote recorded for Blue team in game " + game.GetGameName() + " by " + player.User.Username + ". (" + game.BlueWinCalls.Count() + "/5)");
+                    await SendMessage(textChannel,"Vote recorded for Blue team in game " + game.GetGameName() + " by " + player.Name + ". (" + game.BlueWinCalls.Count() + "/5)");
                 }
             }
             else if (game.DrawCalls.Contains(player))
@@ -566,15 +566,15 @@ namespace BanjoBot
                 {
                     case Teams.Red:
                         game.RedWinCalls.Add(player);
-                        await SendMessage(textChannel,"Vote recorded for Red team in game " + game.GetGameName() + " by " + player.User.Username + ". (" + game.RedWinCalls.Count() + "/5)");
+                        await SendMessage(textChannel,"Vote recorded for Red team in game " + game.GetGameName() + " by " + player.Name + ". (" + game.RedWinCalls.Count() + "/5)");
                         break;
                     case Teams.Blue:
                         game.BlueWinCalls.Add(player);
-                        await SendMessage(textChannel,"Vote recorded for Blue team in game " + game.GetGameName() + " by " + player.User.Username + ". (" + game.BlueWinCalls.Count() + "/5)");
+                        await SendMessage(textChannel,"Vote recorded for Blue team in game " + game.GetGameName() + " by " + player.Name + ". (" + game.BlueWinCalls.Count() + "/5)");
                         break;
                     case Teams.Draw:
                         game.DrawCalls.Add(player);
-                        await SendMessage(textChannel,"Vote recorded for draw " + game.GetGameName() + " by " + player.User.Username + ". (" + game.DrawCalls.Count() + "/5)");
+                        await SendMessage(textChannel,"Vote recorded for draw " + game.GetGameName() + " by " + player.Name + ". (" + game.DrawCalls.Count() + "/5)");
                         break;
                 }
             }
@@ -678,7 +678,7 @@ namespace BanjoBot
             if (statsRecorded == 0)
                 statsRecorded = 1;
 
-            string message = $"**{player.User.Username}'s Profile**\n`";
+            string message = $"**{player.Name}'s Profile**\n`";
             message += $"{"League",-24} {League.Name,-12} \n";
             message += $"{"Season",-24} {season,-12} \n";
             message += $"{"Matches",-24} {playerStats.MatchCount,-12} \n";
@@ -833,7 +833,7 @@ namespace BanjoBot
                 }
             }
 
-            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.User.Username;
+            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.Name;
             message = "**Season " + League.Season + " has ended.**\n";
             message += "Big thanks to our most active player " + mentionMostActive + " with " + max + " matches \n\n";
             message += "**Top Players Season " + League.Season + ": **\n";
@@ -844,9 +844,9 @@ namespace BanjoBot
             for (int i = 0; i < sortedDict.Count(); i++) {
                 if (i < 10) {
                     PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(League.LeagueID, League.Season);
-                    string username = sortedDict.ElementAt(i).User.Username.Length > 8
-                        ? sortedDict.ElementAt(i).User.Username.Substring(0, 8)
-                        : sortedDict.ElementAt(i).User.Username;
+                    string username = sortedDict.ElementAt(i).Name.Length > 8
+                        ? sortedDict.ElementAt(i).Name.Substring(0, 8)
+                        : sortedDict.ElementAt(i).Name;
                     args = new object[] { username, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
                     topPlayers += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
                 }
