@@ -16,7 +16,7 @@ namespace BanjoBot {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(CommandModule));
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
-        private static int saltCounter = 0;
+        private static int saltCounter = 658;
         private DiscordSocketClient _bot;
         private LeagueCoordinator _leagueCoordinator;
         private DatabaseController _database;
@@ -850,17 +850,15 @@ namespace BanjoBot {
                     await ReplyAsync(String.Format("Well, baby, me so horny. Me so HORNY{1}. Me love you long time. You party{1}?", saltCounter, saltIcon));
                     break;
                 case 666:
-                    for (int i = 0; i < 6; i++) {
-                        await ReplyAsync(String.Format("6{1} 6{1} 6{1}" +
-                        "\nWoe to you, oh earth and sea" +
-                        "\nFor the Devil sends the beast with wrath" +
-                        "\nBecause he knows the time is short" +
-                        "\nLet him who hath understanding" +
-                        "\nReckon the number of the beast" +
-                        "\nFor it is a human number" +
-                        "\nIts number is six hundred and sixty six" +
-                        "\n6{1} 6{1} 6{1}", saltCounter, saltIcon));
-                    }
+                    await ReplyAsync(String.Format("6{1} 6{1} 6{1}" +
+                    "\nWoe to you, oh earth and sea" +
+                    "\nFor the Devil sends the beast with wrath" +
+                    "\nBecause he knows the time is short" +
+                    "\nLet him who hath understanding" +
+                    "\nReckon the number of the beast" +
+                    "\nFor it is a human number" +
+                    "\nIts number is six hundred and sixty six" +
+                    "\n6{1} 6{1} 6{1}", saltCounter, saltIcon));
                     break;
                 default:
                     await ReplyAsync(String.Format("There have been {0} {1} occurrences this season", saltCounter, saltIcon));
