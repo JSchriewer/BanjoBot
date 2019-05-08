@@ -277,3 +277,5 @@ __pycache__/
 # Cake - Uncomment if you are using it
 # tools/
 /BanjoBotCore/appsettings.json
+/BanjoBotCore/appsettings - Copy.json
+/BanjoBotCore/appsettings.dev.json

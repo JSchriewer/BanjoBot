@@ -11,10 +11,6 @@ namespace BanjoBot
 {
     public class LeagueController
     {
-
-        //TODO: Refactor: Split discord related stuff & controlling
-        //TODO: Refactor: Entrypoint for controlling: checkPreconditions() -> Controlling -> SendResultString ->  Controlling
-        //^ not its preconditions in start command, some controlling in there "Lobby=null"
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
         public League League;
         private Lobby Lobby { get; set; }
@@ -27,6 +23,10 @@ namespace BanjoBot
             League = league;
             _database = new DatabaseController();
         }
+
+        /// 
+        /// League logic
+        ///
 
         private bool LobbyExists()
         {
@@ -81,18 +81,9 @@ namespace BanjoBot
             await AddDiscordRole(player);
         }
 
-        public async Task AddDiscordRole(Player player)
-        {
-            if (League.HasDiscord() && League.DiscordInformation.LeagueRole != null) {
-                if (!player.User.Roles.Contains(League.DiscordInformation.LeagueRole)) {
-                    await player.User.AddRoleAsync(League.DiscordInformation.LeagueRole);
-                }
-            }
-        }
-
         private async Task CloseGame(Teams winnerTeam, MatchResult match)
         {
-            //Adding missing details
+            //Adding Details to Match-Object
             match.Date = DateTime.Now;
 
             List<Player> winner = new List<Player>();
@@ -223,6 +214,71 @@ namespace BanjoBot
                 user.IncMatches(League.LeagueID, League.Season);
                 if (user.GetLeagueStat(League.LeagueID, League.Season).MMR < 0)
                     user.SetMMR(League.LeagueID, League.Season, 0);
+            }
+        }
+
+        public async Task StartNewSeason(IMessageChannel textChannel)
+        {
+            String message = "";
+            Player mostActive = null;
+            int max = Int32.MinValue;
+            foreach (var player in League.RegisteredPlayers)
+            {
+                if (player.GetLeagueStat(League.LeagueID, League.Season).MatchCount > max)
+                {
+                    mostActive = player;
+                    max = player.GetLeagueStat(League.LeagueID, League.Season).MatchCount;
+                }
+            }
+
+            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.Name;
+            message = "**Season " + League.Season + " has ended.**\n";
+            message += "Big thanks to our most active player " + mentionMostActive + " with " + max + " matches \n\n";
+            message += "**Top Players Season " + League.Season + ": **\n";
+            var sortedDict = from entry in League.RegisteredPlayers orderby entry.GetLeagueStat(League.LeagueID, League.Season).MMR descending select entry;
+
+            object[] args = new object[] { "Name", "MMR", "Matches", "Wins", "Losses" };
+            string topPlayers = String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
+            for (int i = 0; i < sortedDict.Count(); i++)
+            {
+                if (i < 10)
+                {
+                    PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(League.LeagueID, League.Season);
+                    string username = sortedDict.ElementAt(i).Name.Length > 8
+                        ? sortedDict.ElementAt(i).Name.Substring(0, 8)
+                        : sortedDict.ElementAt(i).Name;
+                    args = new object[] { username, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
+                    topPlayers += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
+                }
+
+                PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
+                sortedDict.ElementAt(i).PlayerStats.Add(newStats);
+                await _database.UpdatePlayerStats(sortedDict.ElementAt(i), newStats);
+            }
+            string mention = "";
+            if (League.DiscordInformation.LeagueRole != null)
+                mention = League.DiscordInformation.LeagueRole.Mention + " ";
+
+            await SendMessage(textChannel, mention + message + "```" + topPlayers + "```");
+            League.Season++;
+            League.Matches = new List<MatchResult>();
+            League.GameCounter = 0;
+            await _database.UpdateLeague(League);
+
+        }
+
+        /// 
+        /// Discord related methods
+        /// 
+
+        public async Task AddDiscordRole(Player player)
+        {
+            if (League.HasDiscord() && League.DiscordInformation.LeagueRole != null)
+            {
+                if (!player.User.Roles.Contains(League.DiscordInformation.LeagueRole))
+                {
+                    await player.User.AddRoleAsync(League.DiscordInformation.LeagueRole);
+                }
             }
         }
 
@@ -817,54 +873,6 @@ namespace BanjoBot
 
             await SendMessage(textChannel, message);
             await UpdateChannelWithLobby();
-        }
-       
-        public async Task StartNewSeason(IMessageChannel textChannel)
-        {
-            String message = "";
-            Player mostActive = null;
-            int max = Int32.MinValue;
-            foreach (var player in League.RegisteredPlayers)
-            {
-                if (player.GetLeagueStat(League.LeagueID, League.Season).MatchCount > max)
-                {
-                    mostActive = player;
-                    max = player.GetLeagueStat(League.LeagueID, League.Season).MatchCount;
-                }
-            }
-
-            string mentionMostActive = mostActive == null ? "fuck you" : mostActive.Name;
-            message = "**Season " + League.Season + " has ended.**\n";
-            message += "Big thanks to our most active player " + mentionMostActive + " with " + max + " matches \n\n";
-            message += "**Top Players Season " + League.Season + ": **\n";
-            var sortedDict = from entry in League.RegisteredPlayers orderby entry.GetLeagueStat(League.LeagueID, League.Season).MMR descending select entry;
-
-            object[] args = new object[] { "Name", "MMR", "Matches", "Wins", "Losses" };
-            string topPlayers = String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
-            for (int i = 0; i < sortedDict.Count(); i++) {
-                if (i < 10) {
-                    PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(League.LeagueID, League.Season);
-                    string username = sortedDict.ElementAt(i).Name.Length > 8
-                        ? sortedDict.ElementAt(i).Name.Substring(0, 8)
-                        : sortedDict.ElementAt(i).Name;
-                    args = new object[] { username, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
-                    topPlayers += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
-                }
-
-                PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
-                sortedDict.ElementAt(i).PlayerStats.Add(newStats);
-                await _database.UpdatePlayerStats(sortedDict.ElementAt(i), newStats);
-            }
-            string mention = "";
-            if (League.DiscordInformation.LeagueRole != null)
-                mention = League.DiscordInformation.LeagueRole.Mention + " ";
-
-            await SendMessage(textChannel,mention + message + "```" + topPlayers + "```");
-            League.Season++;
-            League.Matches = new List<MatchResult>();
-            League.GameCounter = 0;
-            await _database.UpdateLeague(League);
-        
         }
 
         private async Task UpdateChannelWithLobby() {

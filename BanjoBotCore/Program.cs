@@ -46,8 +46,11 @@ namespace BanjoBot
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
+#if RELEASE 
                 .AddJsonFile("appsettings.json", true, true);
-
+#else
+                .AddJsonFile("appsettings.dev.json",true,true);
+#endif
             _config = builder.Build();
 
             _client = new DiscordSocketClient(new DiscordSocketConfig
@@ -67,7 +70,7 @@ namespace BanjoBot
             await LoadLeagueInformation();
             await LoadPlayerBase();
             await LoadMatchHistory();
-            
+    
             String token = _config.GetValue<String>("Token:Discord");
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();

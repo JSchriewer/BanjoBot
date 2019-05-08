@@ -577,7 +577,7 @@ namespace BanjoBot {
                     s = "";
                 }
                 PlayerStats Stats = player.GetLeagueStat(lc.League.LeagueID, lc.League.Season);
-                string name = player.User.Username.Length >= 13 ? player.User.Username.Substring(0, 12) : player.User.Username;
+                string name = player.Name.Length >= 13 ? player.Name.Substring(0, 12) : player.Name;
                 args = new object[]
                 {
                     player.User.Id, name, player.SteamID,Stats.MatchCount,
