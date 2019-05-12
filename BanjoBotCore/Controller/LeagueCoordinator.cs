@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using BanjoBotCore.Controller;
 using Discord.WebSocket;
+using log4net;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BanjoBot {
+namespace BanjoBotCore {
+
+    //TODO: Catch Database Exceptions
+
     public class LeagueCoordinator
     {
+        private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
         private static readonly int PUBLIC_LEAGUE_ID = 25;
-        ////private readonly IServiceProvider _services;
         private static readonly LeagueCoordinator INSTANCE = new LeagueCoordinator();
         public List<LeagueController> LeagueControllers { get; set; }
- 
+        private DatabaseController _database;
+
         private LeagueCoordinator()
         {
-            ////_services = serviceProvider;
+            _database = new DatabaseController();
             LeagueControllers = new List<LeagueController>();
         }
   
@@ -23,23 +30,50 @@ namespace BanjoBot {
             get { return INSTANCE; }
         }
 
-        public void AddLeague(League league)
+        public async Task CreateLeague(String name, DiscordInformation discordInfo)
         {
-            ////DatabaseController database = _services.GetService<DatabaseController>();
-            ////LeagueControllers.Add(new LeagueController(league, database));
-            LeagueControllers.Add(new LeagueController(league));
+            log.Debug("Create new league (Name = " + name + " )");
+            int leagueID = await _database.InsertLeague();
+            League league = new League(leagueID, name, 1);
+            league.DiscordInformation = discordInfo;
+            await AddLeague(league);
+            await _database.UpdateLeague(league);
         }
 
-        public void AddLeague(List<League> leagues) {
+        public async Task DeleteLeague(LeagueController lc)
+        {
+            await _database.DeleteLeague(lc.League);
+            LeagueControllers.Remove(lc);
+        }
+
+        public  async Task<LeagueController> AddLeague(League league)
+        {
+            LeagueController newLeague = new LeagueController(league);
+            LeagueControllers.Add(newLeague);
+
+            return newLeague;
+        }
+
+        public async Task AddLeague(League league, ILeagueEventListener listener)
+        {
+            LeagueController lc = await AddLeague(league);
+            await lc.RegisterEventListener(listener);
+        }
+
+        public async Task AddLeague(List<League> leagues) {
             foreach (var league in leagues)
             {
-                AddLeague(league);
+                await AddLeague(league);
             }
         }
 
-        public void DeleteLeague(LeagueController league) {
-            LeagueControllers.Remove(league);
-        }
+        public async Task AddLeague(List<League> leagues, ILeagueEventListener listener)
+        {
+            foreach (var league in leagues)
+            {
+                await AddLeague(league, listener);
+            }
+        }      
 
         public LeagueController GetLeagueController(SocketGuildChannel channel)
         {

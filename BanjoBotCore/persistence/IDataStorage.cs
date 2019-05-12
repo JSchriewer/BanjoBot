@@ -9,6 +9,6 @@ namespace BanjoBotCore.persistence
     //Also https://stackoverflow.com/questions/46010003/asp-net-core-2-0-value-cannot-be-null-parameter-name-connectionstring
     public interface IDataStorage
     {
-        Task Delete(IPersistentObject toDelete);
+
     }
 }

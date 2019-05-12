@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Discord.API;
 using Discord.WebSocket;
 
-namespace BanjoBot
+namespace BanjoBotCore
 {
     public class Player : IEquatable<Player> {
         public SocketGuildUser User { get; set; }
@@ -151,9 +151,9 @@ namespace BanjoBot
         public void SetStreakZero(int leagueID, int season) {
             GetLeagueStat(leagueID, season).Streak = 0;
         }
-        public bool IsIngame()
+        public bool IsIngame
         {
-            return CurrentGame != null;
+            get{ return CurrentGame != null; }
         }
 
     }

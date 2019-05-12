@@ -4,7 +4,7 @@ using Discord.API;
 using Discord.API.Gateway;
 using Discord.WebSocket;
 
-namespace BanjoBot {
+namespace BanjoBotCore {
     public class League
     {
         public DiscordInformation DiscordInformation { get; set; } = null;

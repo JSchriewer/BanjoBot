@@ -8,7 +8,7 @@ using MySql.Data.MySqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using BanjoBotCore.persistence;
 
-namespace BanjoBot
+namespace BanjoBotCore
 {
     public class DatabaseController 
     {
@@ -123,7 +123,7 @@ namespace BanjoBot
             }
 
             command = new MySqlCommand(queryBuilder.ToString());
-            //assign each parameter its value
+
             for (int i = 0; i < game.PlayerMatchStats.Count; i++)
             {
                 command.Parameters.AddWithValue("@steam_id" + i, game.PlayerMatchStats[i].SteamID);
@@ -151,9 +151,7 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
 
         }
-        
-        
-
+         
         public async Task DrawMatch(int matchID)
         {
             log.Debug("DrawMatch");
@@ -211,7 +209,6 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
 
         }
-
 
         public async Task UpdatePlayerStats(Player player, PlayerStats playerstats)
         {
@@ -277,7 +274,7 @@ namespace BanjoBot
             await ExecuteNoQuery(command);
         }
 
-        public async Task<int> InsertNewMatch(int leagueID, int season, List<Player> blueteam, List<Player> redteam)
+        public async Task<int> InsertMatch(int leagueID, int season, List<Player> blueteam, List<Player> redteam)
         {
             log.Debug("InsertNewMatch");
             MySqlCommand command = new MySqlCommand();
@@ -302,7 +299,7 @@ namespace BanjoBot
             }
 
             command = new MySqlCommand(queryBuilder.ToString());
-            //assign each parameter its value
+
             for (int i = 0; i < allPlayers.Count; i++)
             {
                 Teams team = blueteam.Contains(allPlayers[i]) ? Teams.Blue : Teams.Red;
@@ -316,7 +313,7 @@ namespace BanjoBot
             return matchID;
         }
 
-        public async Task InsertNewPlayer(Player player)
+        public async Task InsertPlayer(Player player)
         {
             log.Debug("Try InsertNewPlayer SteamID(" + player.SteamID + ") DiscordID(" + player.User.Id + ") UserName(" + player.User.Username + ")");
             MySqlCommand command = new MySqlCommand();
@@ -328,7 +325,7 @@ namespace BanjoBot
             log.Debug("New player inserted = SteamID(" + player.SteamID + ") DiscordID(" + player.User.Id + ")UserName(" + player.User.Username + ")");
         }
 
-        public async Task<int> InsertNewLeague()
+        public async Task<int> InsertLeague()
         {
             log.Debug("InsertNewLeague");
             MySqlCommand command = new MySqlCommand();

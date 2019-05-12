@@ -6,9 +6,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace BanjoBot {
+namespace BanjoBotCore {
     public class MatchResult {
         public int MatchID { get; set; }
+        public League League { get; set; }
         public int LeagueID { get; set; }
         public ulong SteamMatchID { get; set; }
         public int Season { get; set; }
@@ -22,7 +23,7 @@ namespace BanjoBot {
         public MatchResult(int matchID, int leagueID, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<PlayerMatchStats> stats, bool statsRecorded)
         {
             MatchID = matchID;
-            LeagueID = leagueID;
+            LeagueID = LeagueID;
             SteamMatchID = steamMatchID;
             Season = season;
             Winner = winner;
@@ -31,11 +32,21 @@ namespace BanjoBot {
             PlayerMatchStats = stats;
             StatsRecorded = statsRecorded;
         }
-        // Json Constructor
-        public MatchResult()
+
+        public MatchResult(int matchID, League league, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<PlayerMatchStats> stats, bool statsRecorded)
         {
-            
+            MatchID = matchID;
+            League = league;
+            LeagueID = league.LeagueID;
+            SteamMatchID = steamMatchID;
+            Season = season;
+            Winner = winner;
+            Date = date;
+            Duration = duration;
+            PlayerMatchStats = stats;
+            StatsRecorded = statsRecorded;
         }
+
         // Json Constructor
         //[JsonConstructor]
         //public MatchResult(int matchID, int leagueID, ulong steamMatchID, int season, Teams winner, int duration, List<PlayerMatchStats> stats) {
@@ -68,11 +79,11 @@ namespace BanjoBot {
                 if ((game.BlueList.Contains(player) && game.Winner == Teams.Blue) ||
                     (game.RedList.Contains(player) && game.Winner == Teams.Red))
                 {
-                    stats = new PlayerMatchStats(this, player.SteamID, 0, 0, Winner, true);
+                    stats = new PlayerMatchStats(this, player, 0, 0, Winner, true);
                 }
                 else
                 {
-                    stats = new PlayerMatchStats(this, player.SteamID, 0, 0, Winner, false);
+                    stats = new PlayerMatchStats(this, player, 0, 0, Winner, false);
                 }
                 PlayerMatchStats.Add(stats);
             }

@@ -5,28 +5,27 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BanjoBot.model {
+namespace BanjoBotCore {
     public static class MatchMaker
     {
         public const int BASE_MMR = 25;
         
-        public static int CalculateMmrAdjustment(List<Player> winner, List<Player> looser, int leagueID, int season)
+        public async static Task<int> CalculateMmrAdjustment(List<Player> winner, List<Player> looser, int leagueID, int season)
         {
-            double mmrDifference = 0;
-            mmrDifference = GetTeamMMR(winner,leagueID,season) - GetTeamMMR(looser,leagueID,season);
+            double mmrDifference = await GetTeamMMR(winner,leagueID,season) - await GetTeamMMR(looser,leagueID,season);
 
-            return mmrCurve(mmrDifference);
+            return await mmrCurve(mmrDifference);
         }
 
-        public static int mmrCurve(double x)
+        public async static Task<int> mmrCurve(double x)
         {
             double approaches = 10;
             double approachRate = Math.Atan(-x*(1/350.0));
             double result = approachRate*approaches + BASE_MMR;
-            return Convert.ToInt32(result);
+            return Convert.ToInt32(Math.Round(result));
         }
 
-        public static int GetTeamMMR(List<Player> team, int leagueID, int season)
+        public async static Task<double> GetTeamMMR(List<Player> team, int leagueID, int season)
         {
             int averageMMR = 0;
             foreach (var player in team)

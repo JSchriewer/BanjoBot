@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nito.AsyncEx;
 
-namespace BanjoBot
+namespace BanjoBotCore
 {
     class SocketServer
     {
@@ -196,7 +196,7 @@ namespace BanjoBot
                     {
                         //Create new player
                         Player newPlayer = new Player(steamIDs[i]);
-                        AsyncContext.Run(() => _leagueCoordinator.GetPublicLeague().RegisterPlayer(newPlayer)); 
+                        AsyncContext.Run(() =>  _leagueCoordinator.GetPublicLeague().RegisterPlayer(newPlayer)); 
                         players.Add(newPlayer);
                     }
                 }
@@ -279,7 +279,7 @@ namespace BanjoBot
                 lc = AsyncContext.Run(() => _leagueCoordinator.GetLeagueController(match.LeagueID));
                 if (lc != null)
                 {
-                    Task.Run(async () => {await lc.CloseGameByEvent(match);});
+                    Task.Run(async () => {await lc.CloseLobbyByEvent(match);});
 
                     var response = new {
                         LeagueID = match.LeagueID,

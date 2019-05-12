@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using BanjoBot.Controller;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -12,11 +11,14 @@ using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using BanjoBotCore.persistence;
+using BanjoBotCore.Controller;
+using BanjoBotCore.Controller;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
-namespace BanjoBot
+namespace BanjoBotCore
 {
+    //TODO: Fix namespaces BanjoBot / BanjoBotCore
     public class Program
     {
         private DiscordSocketClient _client;
@@ -25,6 +27,7 @@ namespace BanjoBot
         private List<SocketGuild> _connectedServers;
         private List<SocketGuild> _initialisedServers;
         private LeagueCoordinator _leagueCoordinator;
+        private CommandController _commandController;
         private DatabaseController _databaseController;
         private CommandHandler _handler;
         //private SocketServer _socketServer;
@@ -38,9 +41,6 @@ namespace BanjoBot
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
             new Program().Run().GetAwaiter().GetResult();
         }
-
-   
-
 
         public async Task Run()
         {
@@ -82,6 +82,7 @@ namespace BanjoBot
             _connectedServers = new List<SocketGuild>();
             _initialisedServers = new List<SocketGuild>();
             _leagueCoordinator = LeagueCoordinator.Instance;
+            _commandController = new CommandController();
             _databaseController = new DatabaseController();
             //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
 
@@ -115,6 +116,7 @@ namespace BanjoBot
                 .AddSingleton(
                     new CommandService(new CommandServiceConfig { CaseSensitiveCommands = false, ThrowOnError = false }))
                 .AddSingleton(_databaseController)
+                .AddSingleton(_commandController) //Should not be a singleton service, multiple instance are fine
                 .AddSingleton<IConfiguration>(_config);
             var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
             // Autowire and create these dependencies now
@@ -130,7 +132,7 @@ namespace BanjoBot
             _log.Info("Loading league information...");
 
             List<League> leagues = await _databaseController.GetLeagues();
-            _leagueCoordinator.AddLeague(leagues);
+            await _leagueCoordinator.AddLeague(leagues,_commandController);
         }
 
         private async Task LoadPlayerBase()
@@ -166,6 +168,7 @@ namespace BanjoBot
                 lc.League.Matches = matches;
                 foreach (var matchResult in matches)
                 {
+                    matchResult.League = lc.League;
                     Lobby lobby = null;
                     if (matchResult.Winner == Teams.None)
                     {
@@ -173,17 +176,18 @@ namespace BanjoBot
                         lobby = new Lobby(lc.League);
                         lobby.MatchID = matchResult.MatchID;
                         lobby.League = lc.League;
-                        lobby.GameNumber = lc.League.GameCounter; //TODO: Can be wrong, persistent lobby when
                         lobby.HasStarted = true;
-                        lc.RunningGames.Add(lobby);
+                        lc.GamesInProgress.Add(lobby);
                     }
 
                     foreach (var stats in matchResult.PlayerMatchStats)
                     {
                         if (lobby != null)
                         {
-                            // Restore Lobby
                             Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
+                            stats.Player = player;
+
+                            // Restore Lobby
                             lobby.Host = player;
                             player.CurrentGame = lobby;
                             lobby.WaitingList.Add(player);

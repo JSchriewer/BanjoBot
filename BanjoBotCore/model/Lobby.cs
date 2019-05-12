@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BanjoBot
+namespace BanjoBotCore
 {
     /// <summary>
     /// Enumerator for referring to teams.
@@ -14,27 +14,24 @@ namespace BanjoBot
 
     public class Lobby
     {
-        //TODO: extract Matchmaker into own class MatchMaker with Matchmaker(List<Players>) & AssignTeams() & GetTeamBlue() & GetTeamRed() & GetMMRAdjustment()
-        //TODO: persistent Lobby, Add Date
-        // Constants
-        public const int MAXPLAYERS    = 8;
+        public const int MAXPLAYERS = 8;
         public const int VOTETHRESHOLD = 5;
-                
-        // Props
+
         public League League { get; set; }
-        public Player Host                { get; set; }
-        public List<Player> WaitingList   { get; set; }
-        public List<Player> RedList       { get; set; }
-        public List<Player> BlueList      { get; set; }
-        public Teams Winner             { get; set; }
-        public List<Player> CancelCalls   { get; set; }
-        public List<Player> RedWinCalls   { get; set; }  
-        public List<Player> BlueWinCalls  { get; set; }
-        public List<Player> DrawCalls     { get; set; }
+        public Player Host { get; set; }
+        public List<Player> WaitingList { get; set; }
+        public List<Player> RedList { get; set; }
+        public List<Player> BlueList { get; set; }
+        public Teams Winner { get; set; }
+        public List<Player> CancelCalls { get; set; }
+        public List<Player> RedWinCalls { get; set; }
+        public List<Player> BlueWinCalls { get; set; }
+        public List<Player> DrawCalls { get; set; }
         public bool HasStarted { get; set; }
         public int MatchID { get; set; }
-        public int GameNumber { get; set; }
         public IUserMessage StartMessage { get; set; }
+
+        private List<IObserver<Lobby>> observers = new List<IObserver<Lobby>>();
 
         /// <summary>
         /// Game constructor. Queries database for game name and binds Host to game.
@@ -42,22 +39,21 @@ namespace BanjoBot
         /// <param name="host">User who hosted the game.</param>
         public Lobby(Player host, League league)
         {
-            GameNumber = 0;
-            Host     = host;
+            Host = host;
             League = league;
             HasStarted = false;
-            WaitingList   = new List<Player>();
-            RedList       = new List<Player>();
-            BlueList      = new List<Player>();
-            CancelCalls   = new List<Player>();
-            BlueWinCalls  = new List<Player>();
-            RedWinCalls   = new List<Player>();
-            DrawCalls     = new List<Player>();
+            WaitingList = new List<Player>();
+            RedList = new List<Player>();
+            BlueList = new List<Player>();
+            CancelCalls = new List<Player>();
+            BlueWinCalls = new List<Player>();
+            RedWinCalls = new List<Player>();
+            DrawCalls = new List<Player>();
             WaitingList.Add(host);
         }
 
-        public Lobby(League league) {
-            GameNumber = 0;
+        public Lobby(League league)
+        {
             League = league;
             HasStarted = false;
             WaitingList = new List<Player>();
@@ -116,7 +112,7 @@ namespace BanjoBot
             if (WaitingList.Count == 0)
                 return false;
 
-            if(user == Host)
+            if (user == Host)
                 Host = WaitingList.First();
 
             return true;
@@ -148,10 +144,10 @@ namespace BanjoBot
                 var mmr1 = 0;
                 var mmr2 = 0;
 
-                for (int i=0; i<numPlayers; i++)
+                for (int i = 0; i < numPlayers; i++)
                 {
                     if (s[i] == 1)
-                        mmr1 += WaitingList[i].GetLeagueStat(League.LeagueID,League.Season).MMR;
+                        mmr1 += WaitingList[i].GetLeagueStat(League.LeagueID, League.Season).MMR;
                     else
                         mmr2 += WaitingList[i].GetLeagueStat(League.LeagueID, League.Season).MMR;
                 }
@@ -166,7 +162,7 @@ namespace BanjoBot
             }
 
             // Assign the players to teams
-            for (int i=0; i<numPlayers; i++)
+            for (int i = 0; i < numPlayers; i++)
             {
                 if (storedTeams[i] == 1)
                     RedList.Add(WaitingList[i]);
@@ -223,11 +219,11 @@ namespace BanjoBot
         {
             int averageMMR = 0;
 
-            if(team == Teams.Red && RedList.Count() > 0)
+            if (team == Teams.Red && RedList.Count() > 0)
             {
                 foreach (var user in RedList)
                 {
-                    averageMMR += user.GetLeagueStat(League.LeagueID,League.Season).MMR;
+                    averageMMR += user.GetLeagueStat(League.LeagueID, League.Season).MMR;
                 }
                 averageMMR = averageMMR / RedList.Count();
             }
@@ -235,7 +231,7 @@ namespace BanjoBot
             {
                 foreach (var user in BlueList)
                 {
-                    averageMMR += user.GetLeagueStat(League.LeagueID,League.Season).MMR;
+                    averageMMR += user.GetLeagueStat(League.LeagueID, League.Season).MMR;
                 }
                 averageMMR = averageMMR / BlueList.Count();
             }
@@ -243,17 +239,13 @@ namespace BanjoBot
             return averageMMR;
         }
 
-        public string GetGameName()
-        {
-            return "BBL#" + GameNumber; 
-        }
-
         /// <summary>
         /// Generates a random string of specified length using only alpha-numeric characters.
         /// </summary>
         /// <param name="length">Length of the string</param>
         /// <returns>String of random characters.</returns>
-        public static String GeneratePassword(int length) {
+        public static String GeneratePassword(int length)
+        {
             const String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             var random = new Random();
             return new String(Enumerable.Repeat(chars, length)

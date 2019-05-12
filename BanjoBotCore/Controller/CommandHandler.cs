@@ -10,7 +10,7 @@ using log4net.Core;
 using log4net.Repository.Hierarchy;
 using log4net;
 
-namespace BanjoBot.Controller {
+namespace BanjoBotCore.Controller {
     class CommandHandler
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
