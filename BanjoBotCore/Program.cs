@@ -294,8 +294,9 @@ namespace BanjoBotCore
             _connectedServers.Remove(socketGuild);
 
             //Workaround for https://github.com/RogueException/Discord.Net/issues/960
-            //TODO: Wait for a Timeout
-            Environment.Exit(1);
+            Thread.Sleep(10000);
+            if(!_connectedServers.Contains(socketGuild))
+                Environment.Exit(1);
 
         }
 
