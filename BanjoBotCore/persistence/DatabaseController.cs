@@ -44,7 +44,7 @@ namespace BanjoBotCore
             {
                 connection.Close();
                 log.Error("ExecuteNoQuery: " + command.CommandText);
-                log.Error(e.InnerException + "| " + e.Message);
+                log.Error(e.ToString());
                 throw new Exception("Error: Couldn't save data");
 
             }
@@ -66,7 +66,7 @@ namespace BanjoBotCore
             {
                 connection.Close();
                 log.Error("ExecuteScalar: " + command.CommandText);
-                log.Error(e.InnerException + "| " + e.Message);
+                log.Error(e.ToString());
                 throw new Exception("Error: Couldn't save data");
             }
         }
@@ -88,7 +88,7 @@ namespace BanjoBotCore
             {
                 connection.Close();
                 log.Error("ExecuteReader: " + command.CommandText);
-                log.Error(e.InnerException + "| " + e.Message);
+                log.Error(e.ToString());
                 throw new Exception("Error: Couldn't save data");
             }
         }

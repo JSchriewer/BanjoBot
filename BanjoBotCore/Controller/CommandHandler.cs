@@ -34,7 +34,8 @@ namespace BanjoBotCore.Controller {
 
         public async Task ConfigureAsync() {
             _client.MessageReceived += ProcessCommandAsync;
-            //  _command.CommandExecuted += OnCommandExecutedAsync;
+            _commands.CommandExecuted += OnCommandExecutedAsync;
+            _commands.Log += LogAsync;
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
 
@@ -76,6 +77,20 @@ namespace BanjoBotCore.Controller {
             return flag;
         }
 
+        public async Task LogAsync(LogMessage logMessage)
+        {
+            // This casting type requries C#7
+            if (logMessage.Exception is CommandException cmdException)
+            {
+                // We can tell the user that something unexpected has happened
+                await cmdException.Context.Channel.SendMessageAsync("Something went catastrophically wrong!");
+
+                // We can also log this incident
+                log.Error($"{cmdException.Context.User} failed to execute '{cmdException.Command.Name}' in {cmdException.Context.Channel}.");
+                log.Error(cmdException.ToString());
+            }
+        }
+
         public async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             // We have access to the information of the command executed,
@@ -91,7 +106,7 @@ namespace BanjoBotCore.Controller {
             // ...or even log the result (the method used should fit into
             // your existing log handler)
             var commandName = command.IsSpecified ? command.Value.Name : "A command";
-            log.Info("CommandExecution by " + context.User.Username + " : " + commandName);
+            log.Info("CommandExecution by " + context.User.Username + " : !" + commandName);
         }
     }
 }

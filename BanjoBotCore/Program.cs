@@ -118,10 +118,12 @@ namespace BanjoBotCore
 
         private IServiceProvider ConfigureServices()
         {
+            CommandServiceConfig commandConfig = new CommandServiceConfig{ CaseSensitiveCommands = false, ThrowOnError = false };
+            //commandConfig.DefaultRunMode = RunMode.Async;
+            CommandService commandService = new CommandService(commandConfig);
             var services = new ServiceCollection()
                 .AddSingleton(_client)
-                .AddSingleton(
-                    new CommandService(new CommandServiceConfig { CaseSensitiveCommands = false, ThrowOnError = false }))
+                .AddSingleton(commandService)                  
                 .AddSingleton(_databaseController)
                 .AddSingleton(_commandController) //Should not be a singleton service, multiple instance should be fine
                 .AddSingleton<IConfiguration>(_config);
@@ -335,7 +337,7 @@ namespace BanjoBotCore
         {
             Exception ex = default(Exception);
             ex = (Exception)e.ExceptionObject;
-            _log.Error(ex.Message + "\n" + ex.StackTrace);
+            _log.Error(ex.ToString());
         }
     }
 }
