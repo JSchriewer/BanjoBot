@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static BanjoBotCore.Controller.DiscordMessageDispatcher;
 
 namespace BanjoBotCore.Controller
 {
@@ -15,15 +16,16 @@ namespace BanjoBotCore.Controller
         //nested Precondition classes to reduce duplicated code
         //mod check precondition class
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
-
-        private LeagueCoordinator _leagueCoordinator = LeagueCoordinator.Instance;
+        
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
         private Dictionary<ulong, IUserMessage> _signups = new Dictionary<ulong, IUserMessage>();
+        private LeagueCoordinator _leagueCoordinator = LeagueCoordinator.Instance;
+        private DiscordMessageDispatcher msgDispatcher;
 
-        public CommandController()
+        public CommandController(DiscordMessageDispatcher msgDispatcher)
         {
-           
+            this.msgDispatcher = msgDispatcher;
         }
 
         public async Task HostLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -258,7 +260,7 @@ namespace BanjoBotCore.Controller
             {
                 redTeam += p.User.Mention + "(" + p.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MMR + ") ";
             }
-            lc.Lobby.StartMessage = await SendMessage(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
+            lc.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await lc.Lobby.StartMessage.PinAsync();
 
             String password = Lobby.GeneratePassword(6);
@@ -1029,7 +1031,13 @@ namespace BanjoBotCore.Controller
             await (await user.GetOrCreateDMChannelAsync()).SendMessageAsync(message);
         }
 
-        private async Task<IUserMessage> SendMessage(IMessageChannel textChannel, String message)
+        private async Task SendMessage(IMessageChannel textChannel, String message)
+        {
+            msgDispatcher.AddQueue(new Message(textChannel, message));
+            //return await textChannel.SendMessageAsync(message);
+        }
+
+        private async Task<IUserMessage> SendMessageImmediate(IMessageChannel textChannel, String message)
         {
             return await textChannel.SendMessageAsync(message);
         }
@@ -1095,7 +1103,7 @@ namespace BanjoBotCore.Controller
             SocketGuildChannel modChannel = e.League.DiscordInformation.ModeratorChannel;
             if (modChannel != null)
             {
-                IUserMessage message = await SendMessage((IMessageChannel)modChannel, "New applicant: " + e.Player.User.Mention + 
+                IUserMessage message = await SendMessageImmediate((IMessageChannel)modChannel, "New applicant: " + e.Player.User.Mention + 
                     "\t" + STEAM_PROFILE_URL + e.Player.SteamID + "\tLeague: " + e.League.Name);
                 _signups.Add(e.Player.User.Id, message);
                 await message.PinAsync();

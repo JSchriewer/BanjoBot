@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using BanjoBotCore.persistence;
 using BanjoBotCore.Controller;
 using BanjoBotCore.Controller;
+using System.Threading;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -30,6 +31,7 @@ namespace BanjoBotCore
         private CommandController _commandController;
         private DatabaseController _databaseController;
         private CommandHandler _handler;
+        private DiscordMessageDispatcher _messageDispatcher;
         //private SocketServer _socketServer;
 
         [STAThread]
@@ -82,8 +84,13 @@ namespace BanjoBotCore
             _connectedServers = new List<SocketGuild>();
             _initialisedServers = new List<SocketGuild>();
             _leagueCoordinator = LeagueCoordinator.Instance;
-            _commandController = new CommandController();
+            _messageDispatcher = new DiscordMessageDispatcher();
+            _commandController = new CommandController(_messageDispatcher);
             _databaseController = new DatabaseController();
+       
+            Thread t = new Thread(new ThreadStart(_messageDispatcher.Run));
+            t.Start();
+
             //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
 
             var serviceProvider = ConfigureServices();
