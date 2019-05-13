@@ -253,12 +253,12 @@ namespace BanjoBotCore.Controller
             String blueTeam = "Blue Team (" + lc.Lobby.GetTeamMMR(Teams.Blue) + "): ";
             foreach (var p in lc.Lobby.BlueList)
             {
-                blueTeam += p.User.Mention + "(" + p.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MMR + ") ";
+                blueTeam += p.User.Mention + "(" + p.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MMR + ") ";
             }
             String redTeam = "Red Team (" + lc.Lobby.GetTeamMMR(Teams.Red) + "): ";
             foreach (var p in lc.Lobby.RedList)
             {
-                redTeam += p.User.Mention + "(" + p.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MMR + ") ";
+                redTeam += p.User.Mention + "(" + p.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MMR + ") ";
             }
             lc.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await lc.Lobby.StartMessage.PinAsync();
@@ -340,7 +340,7 @@ namespace BanjoBotCore.Controller
             if (season <= 0)
                 season = lc.League.Season;
 
-            PlayerStats stats = player.GetLeagueStat(lc.League.LeagueID, season);
+            PlayerStats stats = player.GetLeagueStats(lc.League.LeagueID, season);
             if (stats == null)
             {
                 await SendTempMessage(channel, "No stats found");
@@ -400,7 +400,7 @@ namespace BanjoBotCore.Controller
                     tag += matchStats.TimeAsGoalie;
                 }
             }
-            PlayerStats playerStats = player.GetLeagueStat(lc.League.LeagueID, season);
+            PlayerStats playerStats = player.GetLeagueStats(lc.League.LeagueID, season);
 
             int statCount = statsRecorded;
           
@@ -476,24 +476,51 @@ namespace BanjoBotCore.Controller
             await ShowPlayerProfile(channel, socketGuildChannel, user, lc.League.Season);
         }
 
-        public async Task ShowTopMMR(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
+        public async Task ShowTopMMR(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            Player player = lc.League.GetPlayerByDiscordID(user.Id);
 
             // Sort dictionary by MMR
-            var sortedDict = lc.League.RegisteredPlayers.OrderByDescending(
-                entry => entry.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MMR).ThenBy(entry => entry.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MatchCount).ToList();
+            List<Player> leaderboard = lc.League.GetLeaderBoard();
 
-            string message = "Top 5 players by MMR: \n";
+            bool inTopTen = false;
+            string message = "Top 10 players by MMR: \n";
             int i = 0;
-            foreach (Player p in sortedDict)
+            foreach (Player p in leaderboard)
             {
-                if (i == 5)
-                    break;
-                message += "#" + (i + 1) + " " + p.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + ", ";
-                i++;
+                if (i < 10)
+                {
+                    if (p == player)
+                        inTopTen = true;
+
+                    message += "#" + (i + 1) + " " + p.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + "\n";
+                    i++;
+                }
+
+            }
+            if (!inTopTen) { 
+                message += "-------------------------------------------------\n";
+                int rank = leaderboard.IndexOf(player) + 1;
+                message += "#" + rank + " " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + "\n";
             }
             await SendTempMessage(channel, message);
+        }
+
+        public async Task ShowRank(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        {
+            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            Player player = lc.League.GetPlayerByDiscordID(user.Id);
+
+            List<Player> leaderboard = lc.League.GetLeaderBoard();
+            int rank = leaderboard.IndexOf(player) + 1;
+            String message = "#" + rank + " " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + "\n";
+            await SendTempMessage(channel, message);
+        }
+
+        public async Task ShowInteractiveLeaderboard()
+        {
+            throw new NotImplementedException();
         }
 
         public async Task ReCreateLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, int matchID, IGuildUser playerToRemove)
@@ -685,10 +712,10 @@ namespace BanjoBotCore.Controller
             int max = Int32.MinValue;
             foreach (var player in lc.League.RegisteredPlayers)
             {
-                if (player.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MatchCount > max)
+                if (player.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MatchCount > max)
                 {
                     mostActive = player;
-                    max = player.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MatchCount;
+                    max = player.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MatchCount;
                 }
             }
 
@@ -696,7 +723,7 @@ namespace BanjoBotCore.Controller
             message = "**Season " + lc.League.Season + " has ended.**\n";
             message += "Big thanks to our most active player " + mentionMostActive + " with " + max + " matches \n\n";
             message += "**Top Players Season " + lc.League.Season + ": **\n";
-            var sortedDict = from entry in lc.League.RegisteredPlayers orderby entry.GetLeagueStat(lc.League.LeagueID, lc.League.Season).MMR descending select entry;
+            var sortedDict = from entry in lc.League.RegisteredPlayers orderby entry.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MMR descending select entry;
 
             object[] args = new object[] { "Name", "MMR", "Matches", "Wins", "Losses" };
             string topPlayers = String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
@@ -704,7 +731,7 @@ namespace BanjoBotCore.Controller
             {
                 if (i < 10)
                 {
-                    PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(lc.League.LeagueID, lc.League.Season);
+                    PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStats(lc.League.LeagueID, lc.League.Season);
                     string name = sortedDict.ElementAt(i).User != null ? sortedDict.ElementAt(i).Name : "unknown";
                     name = name.Length > 13 ? name.Substring(0, 12) : name;
                     args = new object[] { name, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
@@ -773,12 +800,12 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-            object[] args = new object[] { "DiscordID", "Name", "SteamID", "Matches", "M+D", "Wins", "Losses", "Mmr" };
+            object[] args = new object[] { "DiscordID", "Name", "SteamID", "Matches", "M+D", "Wins", "Losses", "Rating" };
             String s = String.Format(
-                "{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8}\n", args);
+                "{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-8} {6,-8} {7,-8}\n", args);
 
 
-            foreach (var player in lc.League.RegisteredPlayers)
+            foreach (var player in lc.League.GetLeaderBoard())
             {
                 Console.Write("player: " + player.discordID + " steam: " + player.SteamID);
                 if (s.Length > 1800)
@@ -786,7 +813,7 @@ namespace BanjoBotCore.Controller
                     await SendMessage(channel, "```" + s + "```");
                     s = "";
                 }
-                PlayerStats Stats = player.GetLeagueStat(lc.League.LeagueID, lc.League.Season);
+                PlayerStats Stats = player.GetLeagueStats(lc.League.LeagueID, lc.League.Season);
                 string name = player.User != null ? player.Name : "unknown";
                 name = name.Length > 13 ? name.Substring(0, 12) : name;
                 args = new object[]
@@ -795,7 +822,7 @@ namespace BanjoBotCore.Controller
                     player.Matches.Count,Stats.Wins, Stats.Losses, Stats.MMR
                 };
 
-                s += String.Format("{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-10} {6,-8}{7,-8}\n", args);
+                s += String.Format("{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-8} {6,-8}{7,-8}\n", args);
 
 
             }
@@ -984,8 +1011,8 @@ namespace BanjoBotCore.Controller
             foreach (var stats in matchResult.PlayerMatchStats)
             {
                 Player player = stats.Player;
-                if (player.GetLeagueStat(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStat(league.LeagueID, league.Season).Streak - 1) + " ";
+                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
                 else
                     message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
             }
@@ -994,8 +1021,8 @@ namespace BanjoBotCore.Controller
             foreach (var stats in matchResult.PlayerMatchStats)
             {
                 Player player = stats.Player;
-                if (player.GetLeagueStat(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStat(league.LeagueID, league.Season).Streak - 1) + " ";
+                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
                 else
                     message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
             }

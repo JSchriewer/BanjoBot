@@ -224,11 +224,11 @@ namespace BanjoBotCore
                         {
                             SteamID = player.SteamID,
                             Team = Teams.None,
-                            MatchesCount = player.GetLeagueStat(pubLeague.LeagueID,pubLeague.Season).MatchCount,
-                            Wins = player.GetLeagueStat(pubLeague.LeagueID, pubLeague.Season).Wins,
-                            Losses = player.GetLeagueStat(pubLeague.LeagueID, pubLeague.Season).Losses,
-                            MMR = player.GetLeagueStat(pubLeague.LeagueID, pubLeague.Season).MMR,
-                            Streak = player.GetLeagueStat(pubLeague.LeagueID, pubLeague.Season).Streak
+                            MatchesCount = player.GetLeagueStats(pubLeague.LeagueID,pubLeague.Season).MatchCount,
+                            Wins = player.GetLeagueStats(pubLeague.LeagueID, pubLeague.Season).Wins,
+                            Losses = player.GetLeagueStats(pubLeague.LeagueID, pubLeague.Season).Losses,
+                            MMR = player.GetLeagueStats(pubLeague.LeagueID, pubLeague.Season).MMR,
+                            Streak = player.GetLeagueStats(pubLeague.LeagueID, pubLeague.Season).Streak
                         })
                     };
                     return JsonConvert.SerializeObject(response);
@@ -244,11 +244,11 @@ namespace BanjoBotCore
                         Players = players.Select(player => new {
                             SteamID = player.SteamID,
                             Team = lobby.BlueWinCalls.Contains(player) ? Teams.Blue : Teams.Red,
-                            MatchesCount = player.GetLeagueStat(league.LeagueID, league.Season).MatchCount,
-                            Wins = player.GetLeagueStat(league.LeagueID, league.Season).Wins,
-                            Losses = player.GetLeagueStat(league.LeagueID, league.Season).Losses,
-                            MMR = player.GetLeagueStat(league.LeagueID, league.Season).MMR,
-                            Streak = player.GetLeagueStat(league.LeagueID, league.Season).Streak
+                            MatchesCount = player.GetLeagueStats(league.LeagueID, league.Season).MatchCount,
+                            Wins = player.GetLeagueStats(league.LeagueID, league.Season).Wins,
+                            Losses = player.GetLeagueStats(league.LeagueID, league.Season).Losses,
+                            MMR = player.GetLeagueStats(league.LeagueID, league.Season).MMR,
+                            Streak = player.GetLeagueStats(league.LeagueID, league.Season).Streak
                           
                         })
                     };

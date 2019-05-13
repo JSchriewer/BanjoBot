@@ -182,7 +182,14 @@ namespace BanjoBotCore {
         [Command("topmmr"), Summary("Shows the top 5 players"), Alias(new string[] { "top", "t" }), RequireLeagueChannel]
         public async Task TopMMR() {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.ShowTopMMR(Context.Channel, socketGuildChannel);
+            await _commandController.ShowTopMMR(Context.Channel, socketGuildChannel, Context.User);
+        }
+
+        [Command("rank"), Summary("Shows the top 5 players"), Alias(new string[] { "r" }), RequireLeagueChannel]
+        public async Task Rank()
+        {
+            SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
+            await _commandController.ShowRank(Context.Channel, socketGuildChannel, Context.User);
         }
 
         [Command("register"), Summary("!register <SteamID> [#league_channel] | League registration")]

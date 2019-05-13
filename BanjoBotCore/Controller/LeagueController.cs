@@ -141,7 +141,7 @@ namespace BanjoBotCore
             {
                 player.PlayerStats.Add(new PlayerStats(League.LeagueID, League.Season));
                 await _database.InsertRegistrationToLeague(player, League);
-                await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
+                await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
             }
             catch(Exception e)
             {
@@ -187,7 +187,7 @@ namespace BanjoBotCore
                 if (stats.Team == winnerTeam)
                 {
                     stats.MmrAdjustment = mmrAdjustment;
-                    stats.StreakBonus = 2 * player.GetLeagueStat(League.LeagueID, League.Season).Streak;
+                    stats.StreakBonus = 2 * player.GetLeagueStats(League.LeagueID, League.Season).Streak;
                     stats.Win = true;
                 }
                 else {
@@ -209,7 +209,7 @@ namespace BanjoBotCore
                 await AdjustPlayerStats(winner, looser);
                 foreach (var player in allPlayer)
                 {
-                    await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
+                    await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
                     player.Matches.Add(match);
                 }
             }
@@ -289,7 +289,7 @@ namespace BanjoBotCore
             {
                 user.IncWins(League.LeagueID, League.Season);
                 user.IncMMR(League.LeagueID, League.Season,
-                        mmrAdjustment + 2 * user.GetLeagueStat(League.LeagueID, League.Season).Streak);
+                        mmrAdjustment + 2 * user.GetLeagueStats(League.LeagueID, League.Season).Streak);
                 user.IncStreak(League.LeagueID, League.Season);
                 user.IncMatches(League.LeagueID, League.Season);
             }
@@ -300,7 +300,7 @@ namespace BanjoBotCore
                 user.SetStreakZero(League.LeagueID, League.Season);
                 user.DecMMR(League.LeagueID, League.Season, mmrAdjustment);
                 user.IncMatches(League.LeagueID, League.Season);
-                if (user.GetLeagueStat(League.LeagueID, League.Season).MMR < 0)
+                if (user.GetLeagueStats(League.LeagueID, League.Season).MMR < 0)
                     user.SetMMR(League.LeagueID, League.Season, 0);
             }
         }

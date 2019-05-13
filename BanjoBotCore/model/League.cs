@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Discord;
 using Discord.API;
 using Discord.API.Gateway;
@@ -47,6 +48,16 @@ namespace BanjoBotCore {
             return null;
         }
 
+        public List<Player> GetLeaderBoard()
+        {
+            return (List<Player>)RegisteredPlayers.OrderBy(player => player.GetLeagueStats(LeagueID, Season).MMR).Reverse().ToList();
+        }
+
+        public List<Player> GetLeaderBoard(int season)
+        {
+            return (List<Player>)RegisteredPlayers.OrderBy(player => player.GetLeagueStats(LeagueID, season).MMR).Reverse().ToList();
+        }
+
         public bool HasDiscord() {
             if (DiscordInformation != null && DiscordInformation.DiscordServer != null)
             {
@@ -55,5 +66,8 @@ namespace BanjoBotCore {
 
             return false;
         }
+
+      
+        
     }
 }

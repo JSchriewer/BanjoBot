@@ -147,9 +147,9 @@ namespace BanjoBotCore
                 for (int i = 0; i < numPlayers; i++)
                 {
                     if (s[i] == 1)
-                        mmr1 += WaitingList[i].GetLeagueStat(League.LeagueID, League.Season).MMR;
+                        mmr1 += WaitingList[i].GetLeagueStats(League.LeagueID, League.Season).MMR;
                     else
-                        mmr2 += WaitingList[i].GetLeagueStat(League.LeagueID, League.Season).MMR;
+                        mmr2 += WaitingList[i].GetLeagueStats(League.LeagueID, League.Season).MMR;
                 }
 
                 var difference = Math.Abs(mmr1 - mmr2);
@@ -223,7 +223,7 @@ namespace BanjoBotCore
             {
                 foreach (var user in RedList)
                 {
-                    averageMMR += user.GetLeagueStat(League.LeagueID, League.Season).MMR;
+                    averageMMR += user.GetLeagueStats(League.LeagueID, League.Season).MMR;
                 }
                 averageMMR = averageMMR / RedList.Count();
             }
@@ -231,7 +231,7 @@ namespace BanjoBotCore
             {
                 foreach (var user in BlueList)
                 {
-                    averageMMR += user.GetLeagueStat(League.LeagueID, League.Season).MMR;
+                    averageMMR += user.GetLeagueStats(League.LeagueID, League.Season).MMR;
                 }
                 averageMMR = averageMMR / BlueList.Count();
             }

@@ -30,7 +30,7 @@ namespace BanjoBotCore {
             int averageMMR = 0;
             foreach (var player in team)
             {
-                averageMMR += player.GetLeagueStat(leagueID, season).MMR;
+                averageMMR += player.GetLeagueStats(leagueID, season).MMR;
             }
             //TODO: Remove me
             if (team.Count < 1)
