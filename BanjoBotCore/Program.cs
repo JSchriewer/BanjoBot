@@ -10,8 +10,6 @@ using log4net.Config;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using Microsoft.Extensions.Configuration;
-using BanjoBotCore.persistence;
-using BanjoBotCore.Controller;
 using BanjoBotCore.Controller;
 using System.Threading;
 
@@ -19,7 +17,6 @@ using System.Threading;
 
 namespace BanjoBotCore
 {
-    //TODO: Fix namespaces BanjoBot / BanjoBotCore
     public class Program
     {
         private DiscordSocketClient _client;
@@ -87,34 +84,16 @@ namespace BanjoBotCore
             _messageDispatcher = new DiscordMessageDispatcher();
             _commandController = new CommandController(_messageDispatcher);
             _databaseController = new DatabaseController();
-       
+            //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
+
             Thread t = new Thread(new ThreadStart(_messageDispatcher.Run));
             t.Start();
-
-            //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
 
             var serviceProvider = ConfigureServices();
             _handler = new CommandHandler(serviceProvider);
 
             await _handler.ConfigureAsync();
         }
-
-        //private IServiceProvider ConfigureServices()
-        //{
-        //    var services = new ServiceCollection();
-        //    services.AddSingleton(_client);
-        //    services.AddSingleton(new CommandService(new CommandServiceConfig { CaseSensitiveCommands = false, ThrowOnError = false }));
-        //    services.AddSingleton<IConfiguration>(_config);
-        //    services.AddSingleton(_databaseController);
-        //    ////services.AddSingleton(_leagueCoordinator);
-
-        //    ////var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
-        //    //// Autowire and create these dependencies now
-        //    ////provider.GetService<LogAdaptor>();
-        //    ////provider.GetService<TagService>();
-        //    ////provider.GetService<GitHubService>();
-        //    ////return services.BuildServiceProvider(); ;
-        //}
 
         private IServiceProvider ConfigureServices()
         {
@@ -197,7 +176,7 @@ namespace BanjoBotCore
                             Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
                             stats.Player = player;
 
-                            // Restore Lobby
+                            // Restore Lobby Details
                             lobby.Host = player;
                             player.CurrentGame = lobby;
                             lobby.WaitingList.Add(player);
@@ -215,12 +194,6 @@ namespace BanjoBotCore
                         if (p != null)
                             p.Matches.Add(matchResult);
                     }
-
-                    //if (lobby != null)
-                    //{
-                    //    // Restore Lobby
-                    //    lobby.MmrAdjustment = lobby.CalculateMmrAdjustment();
-                    //}
                 }
             }
         }
@@ -230,19 +203,22 @@ namespace BanjoBotCore
             if (!_connectedServers.Contains(server))
             {
                 _connectedServers.Add(server);
-                _log.Info("Bot connected to a new server: " + server.Name + "(" + server.Id + ")");
 
-                if (!IsServerInitialised(server))
+                if (!IsServerInitialised(server)) {
+                    _log.Info("Bot connected to : " + server.Name + "(" + server.Id + ")");
                     await UpdateDiscordInformation(server);
-            }
+                }
+                else
+                {
+                    _log.Info("Bot reconnected to : " + server.Name + "(" + server.Id + ")");
+                    await UpdateDiscordInformation(server);
+                }
 
+            }
         }
 
         private async Task UpdateDiscordInformation(SocketGuild server)
         {
-            //TODO: Gets called on reconnect
-            //What happens if you leave and reconnect to the server? with or without a bot restart?
-            //server.GetUser != _client.GetUser
             _log.Info("Update discord information " + server.Name + "(" + server.Id + ")...");
             foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer(server))
             {
@@ -254,6 +230,10 @@ namespace BanjoBotCore
                     }
                 }
 
+                //TODO: More Validation (Channels, Roles, ...)
+
+                //Validate Players and update discord references
+                //Users that left the discord server will be removed from the league
                 List<Player> deletedDiscordAccounts = new List<Player>();
                 foreach (var player in lc.League.RegisteredPlayers)
                 {
@@ -295,8 +275,10 @@ namespace BanjoBotCore
 
             //Workaround for https://github.com/RogueException/Discord.Net/issues/960
             Thread.Sleep(10000);
-            if(!_connectedServers.Contains(socketGuild))
+            if (!_connectedServers.Contains(socketGuild)) { 
+                _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
                 Environment.Exit(1);
+            }
 
         }
 
