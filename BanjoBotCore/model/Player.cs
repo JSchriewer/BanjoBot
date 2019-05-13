@@ -15,7 +15,7 @@ namespace BanjoBotCore
         public ulong SteamID { get; set; }
         public Lobby CurrentGame   { get; set; }
         public List<PlayerStats> PlayerStats { get; set; }
-        public List<PlayerMatchStats> Matches { get; set; }
+        public List<MatchResult> Matches { get; set; }
 
         public Player(SocketGuildUser discordUser, ulong steamid)
         {
@@ -23,7 +23,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<PlayerMatchStats>();
+            Matches = new List<MatchResult>();
             discordID = User.Id;
         }
 
@@ -31,7 +31,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<PlayerMatchStats>();
+            Matches = new List<MatchResult>();
         }
 
 
@@ -41,7 +41,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<PlayerMatchStats>();
+            Matches = new List<MatchResult>();
         }
 
 
@@ -80,36 +80,36 @@ namespace BanjoBotCore
             return stats;
         }
 
-        public List<PlayerMatchStats> GetMatchesBySeason(int leagueID, int season)
+        public List<MatchResult> GetMatchesBySeason(int leagueID, int season)
         {
-            List<PlayerMatchStats> result = new List<PlayerMatchStats>();
-            foreach (PlayerMatchStats ps in Matches)
+            List<MatchResult> result = new List<MatchResult>();
+            foreach (MatchResult match in Matches)
             {
-                if (ps.Match.LeagueID == leagueID && ps.Match.Season == season)
+                if (match.LeagueID == leagueID && match.Season == season)
                 {
-                    result.Add(ps);
+                    result.Add(match);
                 }
             }
 
             return result;
         }
 
-        public List<PlayerMatchStats> GetAllMatches(int leagueID) {
-            List<PlayerMatchStats> result = new List<PlayerMatchStats>();
-            foreach (PlayerMatchStats ps in Matches) {
-                if (ps.Match.LeagueID == leagueID) {
-                    result.Add(ps);
+        public List<MatchResult> GetAllMatches(int leagueID) {
+            List<MatchResult> result = new List<MatchResult>();
+            foreach (MatchResult match in Matches) {
+                if (match.LeagueID == leagueID) {
+                    result.Add(match);
                 }
             }
 
             return result;
         }
 
-        public PlayerMatchStats GetMatchStats(MatchResult match)
+        public MatchPlayerStats GetMatchStats(MatchResult match)
         {
-            foreach (var stats in Matches)
+            foreach (var stats in match.PlayerMatchStats)
             {
-                if (stats.Match == match)
+                if (stats.Player == this)
                 {
                     return stats;
                 }

@@ -30,7 +30,6 @@ namespace BanjoBotCore
 
         public async Task<int> ExecuteNoQuery(MySqlCommand command)
         {
-            //log.Debug("ExecuteNoQuery: " + command.CommandText);
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -42,17 +41,20 @@ namespace BanjoBotCore
                 }
             }
             catch (Exception e)
+            {                
+                log.Error("ExecuteNoQuery: " + command.CommandText);
+                log.Error(e.InnerException + "| " + e.Message);
+                throw new Exception("Error: Couldn't save data");
+
+            }
+            finally
             {
                 connection.Close();
-                log.Error(e.InnerException + "| " + e.Message);
             }
-
-            return 0;
         }
 
         public async Task<int> ExecuteScalar(MySqlCommand command)
         {
-            //log.Debug("ExecuteScalar: " + command.CommandText);
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -64,17 +66,20 @@ namespace BanjoBotCore
                 }
             }
             catch (Exception e)
+            {                
+                log.Error("ExecuteScalar: " + command.CommandText);
+                log.Error(e.InnerException + "| " + e.Message);
+                throw new Exception("Error: Couldn't save data");
+            }
+            finally
             {
                 connection.Close();
-                log.Error(e.InnerException + "| " + e.Message);
             }
-
-            return 0;
         }
 
         public async Task<MySqlDataReader> ExecuteReader(MySqlCommand command)
         {
-            //log.Debug("ExecuteReader: " + command.CommandText);
+            
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -87,11 +92,14 @@ namespace BanjoBotCore
             }
             catch (Exception e)
             {
-                connection.Close();
+                log.Error("ExecuteReader: " + command.CommandText);
                 log.Error(e.InnerException + "| " + e.Message);
+                throw new Exception("Error: Couldn't save data");
             }
-
-            return null;
+            finally
+            {
+                connection.Close();
+            }
         }
 
         public async Task UpdateMatchResult(MatchResult game)
@@ -665,10 +673,10 @@ namespace BanjoBotCore
                         }
                     }
                     if (matchResult == null) {
-                        matchResult = new MatchResult(match_id, leagueID, steam_match_id, season, winner, date, duration, new List<PlayerMatchStats>(), statsRecorded);
+                        matchResult = new MatchResult(match_id, leagueID, steam_match_id, season, winner, date, duration, new List<MatchPlayerStats>(), statsRecorded);
                         matches.Add(matchResult);
                     }
-                    matchResult.PlayerMatchStats.Add(new PlayerMatchStats(matchResult, steam_id, heroID, goals, assist, steals, turnovers, steal_turnover_difference, pickups, passes, passes_received, save_rate, points, possession_time, time_as_goalie, mmr_adjustment, streak_bonus, team, win));
+                    matchResult.PlayerMatchStats.Add(new MatchPlayerStats(matchResult, steam_id, heroID, goals, assist, steals, turnovers, steal_turnover_difference, pickups, passes, passes_received, save_rate, points, possession_time, time_as_goalie, mmr_adjustment, streak_bonus, team, win));
 
                 }
             }

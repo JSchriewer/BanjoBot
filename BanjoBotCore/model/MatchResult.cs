@@ -17,10 +17,10 @@ namespace BanjoBotCore {
         public DateTime Date { get; set; }
         public int Duration { get; set; }
         public bool StatsRecorded { get; set; }
-        public List<PlayerMatchStats> PlayerMatchStats { get; set; }  
+        public List<MatchPlayerStats> PlayerMatchStats { get; set; }  
 
         // Database Constructor
-        public MatchResult(int matchID, int leagueID, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<PlayerMatchStats> stats, bool statsRecorded)
+        public MatchResult(int matchID, int leagueID, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<MatchPlayerStats> stats, bool statsRecorded)
         {
             MatchID = matchID;
             LeagueID = LeagueID;
@@ -33,7 +33,7 @@ namespace BanjoBotCore {
             StatsRecorded = statsRecorded;
         }
 
-        public MatchResult(int matchID, League league, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<PlayerMatchStats> stats, bool statsRecorded)
+        public MatchResult(int matchID, League league, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<MatchPlayerStats> stats, bool statsRecorded)
         {
             MatchID = matchID;
             League = league;
@@ -72,21 +72,32 @@ namespace BanjoBotCore {
             Date = DateTime.Now;
             Duration = 0;
             StatsRecorded = false;
-            PlayerMatchStats = new List<PlayerMatchStats>();
+            PlayerMatchStats = new List<MatchPlayerStats>();
 
-            PlayerMatchStats stats = null;
+            MatchPlayerStats stats = null;
             foreach (var player in game.WaitingList) {
                 if ((game.BlueList.Contains(player) && game.Winner == Teams.Blue) ||
                     (game.RedList.Contains(player) && game.Winner == Teams.Red))
                 {
-                    stats = new PlayerMatchStats(this, player, 0, 0, Winner, true);
+                    stats = new MatchPlayerStats(this, player, 0, 0, Winner, true);
                 }
                 else
                 {
-                    stats = new PlayerMatchStats(this, player, 0, 0, Winner, false);
+                    stats = new MatchPlayerStats(this, player, 0, 0, Winner, false);
                 }
                 PlayerMatchStats.Add(stats);
             }
+        }
+
+        public async Task<MatchPlayerStats> GetPlayerStats(Player player)
+        {
+            foreach(MatchPlayerStats stats in PlayerMatchStats)
+            {
+                if (stats.Player == player)
+                    return stats;
+            }
+
+            return null;
         }
     }
 }

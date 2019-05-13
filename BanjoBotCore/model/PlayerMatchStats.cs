@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace BanjoBotCore {
-    public class PlayerMatchStats {
+    public class MatchPlayerStats {
         public MatchResult Match { get; set; }
         public Player Player { get; set; }
         public ulong SteamID { get; set; }
@@ -29,7 +29,7 @@ namespace BanjoBotCore {
         public bool Win { get; set; }
 
         // Construction from mysql data
-        public PlayerMatchStats(MatchResult match, ulong steamId, int hero, int goals, int assist, int steals, int turnovers, int stealTurnDif, int pickups, int passes, int passesReceived, float saveRate, int points, int possessionTime, int timeAsGoalie, int mmrAdjustment, int streakBonus, Teams team, bool win) {
+        public MatchPlayerStats(MatchResult match, ulong steamId, int hero, int goals, int assist, int steals, int turnovers, int stealTurnDif, int pickups, int passes, int passesReceived, float saveRate, int points, int possessionTime, int timeAsGoalie, int mmrAdjustment, int streakBonus, Teams team, bool win) {
             Match = match;
             SteamID = steamId;
             HeroID = hero;
@@ -52,10 +52,10 @@ namespace BanjoBotCore {
         }
 
         //For Json
-        public PlayerMatchStats() { 
+        public MatchPlayerStats() { 
         }
 
-        public PlayerMatchStats(MatchResult match, Player player, int mmrAdjustment, int streakBonus, Teams team, bool win) {
+        public MatchPlayerStats(MatchResult match, Player player, int mmrAdjustment, int streakBonus, Teams team, bool win) {
             Match = match;
             Player = player;
             SteamID = player.SteamID;

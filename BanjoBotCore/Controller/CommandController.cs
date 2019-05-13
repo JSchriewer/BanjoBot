@@ -26,15 +26,6 @@ namespace BanjoBotCore.Controller
            
         }
 
-        public async Task RegisterEvents(LeagueController lc)
-        {
-            lc.LobbyCreated += LobbyCreated;
-            lc.LobbyClosed += LobbyClosed;
-            lc.LobbyChanged += LobbyChanged;
-            lc.MatchEnded += MatchEnded;
-            lc.PlayerAdded += AddedPlayerToLeague;
-        }
-
         public async Task HostLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
@@ -380,15 +371,16 @@ namespace BanjoBotCore.Controller
             float tag = 0;
             int statsRecorded = 0;
 
-            List<PlayerMatchStats> seasonMatchStats = player.GetMatchesBySeason(lc.League.LeagueID, season);
-            if (seasonMatchStats.Count == 0)
+            List<MatchResult> seasonMatches = player.GetMatchesBySeason(lc.League.LeagueID, season);
+            if (seasonMatches.Count == 0)
             {
                 await SendPrivateMessage(player.User as IGuildUser, "No stats found");
                 return;
             }
 
-            foreach (var matchStats in seasonMatchStats)
+            foreach (var match in seasonMatches)
             {
+                MatchPlayerStats matchStats = await match.GetPlayerStats(player);
                 if (matchStats.Match.StatsRecorded)
                 {
                     statsRecorded++;
@@ -449,11 +441,12 @@ namespace BanjoBotCore.Controller
 
             object[] args = new object[] { "Date", "MatchID", "Goals", "Assist", "Steals", "Turnovers", "S/T", "Pickups", "Passes", "PR", "Save", "Points", "PosT", "TAG", "Mmr", "Streak", "Stats", "Hero" };
             String s = String.Format("{0,-12} {1,-8} {17,-10} {2,-8} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8} {8,-8} {9,-8} {10,-8} {11,-8} {12,-8} {13,-8} {14,-8} {15,-8} {16,-8}\n", args);
-            List<PlayerMatchStats> allStats = player.GetMatchesBySeason(lc.League.LeagueID, season);
-            IOrderedEnumerable<PlayerMatchStats> orderedStats = allStats.OrderByDescending(stats => stats.Match.Date);
+            List<MatchResult> allStats = player.GetMatchesBySeason(lc.League.LeagueID, season);
+            IOrderedEnumerable<MatchResult> orderedStats = allStats.OrderByDescending(match => match.Date);
             for (int i = 0; i < 10 && i < allStats.Count; i++)
             {
-                PlayerMatchStats stats = orderedStats.ElementAt(i);
+                MatchResult match = orderedStats.ElementAt(i);
+                MatchPlayerStats stats = await match.GetPlayerStats(player);
                 args = new object[] { DateTime.Parse(stats.Match.Date.ToString()).ToShortDateString(), stats.Match.MatchID, stats.Goals, stats.Assist, stats.Steals, stats.Turnovers, stats.StealTurnDif, stats.Pickups, stats.Passes, stats.PassesReceived, stats.SaveRate, stats.Points, stats.PossessionTime, stats.TimeAsGoalie, stats.MmrAdjustment, stats.StreakBonus, stats.Match.StatsRecorded, stats.HeroID };
                 s += String.Format("{0,-12} {1,-8} {17,-10} {2,-8} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8} {8,-8} {9,-8} {10,-8:P0} {11,-8} {12,-8} {13,-8} {14,-8} {15,-8} {16,-8}\n", args);
             }
@@ -980,7 +973,7 @@ namespace BanjoBotCore.Controller
             else
                 blueSign = '-';
 
-            int mmrAdjustment = matchResult.PlayerMatchStats.First().MmrAdjustment;
+            int mmrAdjustment = Math.Abs(matchResult.PlayerMatchStats.First().MmrAdjustment);
 
             String message = "";
             message += "Blue team ("+ blueSign + mmrAdjustment + "): ";

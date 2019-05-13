@@ -70,11 +70,19 @@ namespace BanjoBotCore
                 p.CurrentGame = Lobby;
             }
 
-            Lobby.StartGame();
-            GamesInProgress.Add(Lobby);
-            int match_id = await _database.InsertMatch(League.LeagueID, League.Season, Lobby.BlueList, Lobby.RedList);
-            Lobby.MatchID = match_id;
-            Lobby = null;
+            try
+            {
+                int match_id = await _database.InsertMatch(League.LeagueID, League.Season, Lobby.BlueList, Lobby.RedList);
+                Lobby.MatchID = match_id;
+                Lobby.StartGame();
+                GamesInProgress.Add(Lobby);
+                Lobby = null;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+         
         }
 
         private async Task<Lobby> CreateLobby(Player host)
@@ -88,9 +96,17 @@ namespace BanjoBotCore
         {
             log.Debug("Creating new player");
             Player player = new Player(user, steamID);
-            await _database.InsertPlayer(player);
-            await RegisterPlayer(player);
+            try
+            {
+                await _database.InsertPlayer(player);
+            
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
 
+            await RegisterPlayer(player);
             return player;
         }
 
@@ -103,9 +119,17 @@ namespace BanjoBotCore
             else
             {
                 log.Debug("Add applicant" + player.User.Username + " to " + League.Name);
-                League.Applicants.Add(player);
-                await _database.InsertSignupToLeague(player.SteamID, League);
-                await OnApplicantAdded(player, League);               
+                try
+                {
+                    await _database.InsertSignupToLeague(player.SteamID, League);
+                    League.Applicants.Add(player);
+                    await OnApplicantAdded(player, League);
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+                
             }
         }
         
@@ -113,17 +137,23 @@ namespace BanjoBotCore
         {
             log.Debug("RegisterPlayer: " + player.Name + "(" + player.User.Id + ")");
 
+            try
+            {
+                player.PlayerStats.Add(new PlayerStats(League.LeagueID, League.Season));
+                await _database.InsertRegistrationToLeague(player, League);
+                await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
+            }
+            catch(Exception e)
+            {
+                throw e;
+            }
+
             if (League.Applicants.Contains(player))
             {
                 League.Applicants.Remove(player);
             }
 
-            player.PlayerStats.Add(new PlayerStats(League.LeagueID, League.Season));
             League.RegisteredPlayers.Add(player);
-
-            await _database.InsertRegistrationToLeague(player, League);
-            await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
-
             await OnPlayerAdded(player);
         }
 
@@ -132,11 +162,8 @@ namespace BanjoBotCore
             League.Applicants.Remove(player);
             await _database.DeleteRegistration(player.SteamID, League);
         }
-        private async Task CloseLobby(Teams winnerTeam, MatchResult match)
+        private async Task SaveMatchResult(Teams winnerTeam, MatchResult match)
         {
-            //Adding Details to Match-Object
-            match.Date = DateTime.Now;
-
             List<Player> winner = new List<Player>();
             List<Player> looser = new List<Player>();
             foreach (var stats in match.PlayerMatchStats)
@@ -149,10 +176,12 @@ namespace BanjoBotCore
             }
             int mmrAdjustment = await MatchMaker.CalculateMmrAdjustment(winner, looser, League.LeagueID, League.Season);
 
+            //Adding Details to Match-Object
+            match.Date = DateTime.Now;
+
             foreach (var stats in match.PlayerMatchStats)
             {
                 Player player = League.RegisteredPlayers.Find(p => p.SteamID == stats.SteamID);
-                player.CurrentGame = null;
 
                 stats.Match = match;
                 if (stats.Team == winnerTeam)
@@ -166,22 +195,34 @@ namespace BanjoBotCore
                     stats.StreakBonus = 0;
                     stats.Win = false;
                 }
-
-                //TODO: players should have the match instead of the stats
-                player.Matches.Add(stats);
             }
 
-
-            await _database.UpdateMatchResult(match);
-            League.Matches.Add(match);
-
-            await AdjustPlayerStats(winner, looser);
             List<Player> allPlayer = new List<Player>();
             allPlayer.AddRange(winner);
             allPlayer.AddRange(looser);
-            foreach (var player in allPlayer) {
-                await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
+
+            //Saving Data
+            try
+            {
+                await _database.UpdateMatchResult(match);
+                League.Matches.Add(match);
+                await AdjustPlayerStats(winner, looser);
+                foreach (var player in allPlayer)
+                {
+                    await _database.UpdatePlayerStats(player, player.GetLeagueStat(League.LeagueID, League.Season));
+                    player.Matches.Add(match);
+                }
             }
+            catch (Exception e)
+            {
+                throw e;
+            }
+            finally
+            {
+                foreach (var player in allPlayer)
+                    player.CurrentGame = null;
+            }
+        
 
             await OnMatchEnded(match);
 
@@ -204,7 +245,10 @@ namespace BanjoBotCore
             if (match == null)
                 match = new MatchResult(lobby);
 
-            await CloseLobby(winnerTeam, match);
+           
+            await SaveMatchResult(winnerTeam, match);
+           
+         
         }
 
         //League logic does not apply on public games 
@@ -218,9 +262,14 @@ namespace BanjoBotCore
             }
             matchResult.StatsRecorded = true;
             if (lobby != null)
+            {
                 await CloseLobbyByCommand(lobby, matchResult.Winner, matchResult);
+            }
             else
-                await CloseLobby(matchResult.Winner, matchResult);
+            {                
+                await SaveMatchResult(matchResult.Winner, matchResult);
+            }
+                
         }
 
         public async Task DrawMatch(Lobby game)
@@ -442,15 +491,17 @@ namespace BanjoBotCore
                 }
             }
 
+            Teams winner = Teams.None;
             if (game.BlueWinCalls.Count == Lobby.VOTETHRESHOLD)
+                winner = Teams.Blue;
+            if (game.RedWinCalls.Count == Lobby.VOTETHRESHOLD)
+                winner = Teams.Red;
+            if (game.DrawCalls.Count == Lobby.VOTETHRESHOLD) 
+                winner = Teams.Draw;
+
+            if(winner != Teams.None)
             {
-                await CloseLobbyByCommand(game, Teams.Blue);
-            }
-            if (game.RedWinCalls.Count == Lobby.VOTETHRESHOLD) {
-                await CloseLobbyByCommand(game, Teams.Red);
-            }
-            if (game.DrawCalls.Count == Lobby.VOTETHRESHOLD) {
-                await CloseLobbyByCommand(game, Teams.Draw);
+                await CloseLobbyByCommand(game, winner);
             }
         }        
 

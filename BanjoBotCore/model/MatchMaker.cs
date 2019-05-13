@@ -10,9 +10,9 @@ namespace BanjoBotCore {
     {
         public const int BASE_MMR = 25;
         
-        public async static Task<int> CalculateMmrAdjustment(List<Player> winner, List<Player> looser, int leagueID, int season)
+        public async static Task<int> CalculateMmrAdjustment(List<Player> team1, List<Player> team2, int leagueID, int season)
         {
-            double mmrDifference = await GetTeamMMR(winner,leagueID,season) - await GetTeamMMR(looser,leagueID,season);
+            double mmrDifference = await GetTeamMMR(team1,leagueID,season) - await GetTeamMMR(team2,leagueID,season);
 
             return await mmrCurve(mmrDifference);
         }

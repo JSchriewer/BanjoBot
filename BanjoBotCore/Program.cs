@@ -203,7 +203,7 @@ namespace BanjoBotCore
 
                         Player p = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
                         if (p != null)
-                            p.Matches.Add(stats);
+                            p.Matches.Add(matchResult);
                     }
 
                     //if (lobby != null)
