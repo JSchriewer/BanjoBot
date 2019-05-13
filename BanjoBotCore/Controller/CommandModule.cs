@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using IChannel = Discord.IChannel;
 
 namespace BanjoBotCore {
+    [Name("CommandModule")]
     public class CommandModule : ModuleBase<SocketCommandContext> {
 
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(CommandModule));
@@ -39,20 +40,24 @@ namespace BanjoBotCore {
             String s = "Some commands have options marked with [], e.g. [#league_channel]." +
                 " Most of the time the default for an option is the current channel or yourself. \n";
             s += String.Format("{0,-24} {1,-12}\n", "Command", "Description");
-            int count = 0;
-            foreach (var command in _commandService.Commands)
+            
+            foreach (var command in _commandService.Commands.Where(cmd => cmd.Module.Name == "CommandModule"))
             {
-                count++;
-                s += String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
-                if (count % 15 == 0)
+               
+                String nextMsg = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
+                if (s.Length + nextMsg.Length > 2000)
                 {
                     await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
-                    count = 0;
                     s = "";
+                } else
+                {
+                    s += nextMsg;
                 }
 
             }
-            await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+
+            if(s.Length > 0)
+                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
         }
 
         [Command("help"), Summary("Shows usage and description of a specific command"), Alias(new string[] { "h", "?" })]

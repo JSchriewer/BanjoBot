@@ -4,11 +4,13 @@ using Discord.WebSocket;
 using log4net;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
 {
+    [Name("AdminModule")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class CommandAdminModulecs : ModuleBase<SocketCommandContext>
     {
@@ -27,7 +29,33 @@ namespace BanjoBotCore.Controller
             _commandController = commandController;
         }
 
-        // Admin commands
+        [Command("adminhelp"), Summary("Shows all Commands"), Alias(new string[] { "ah", "a?" })]
+        public async Task Help()
+        {
+            String s = "Some commands have options marked with [], e.g. [#league_channel]." +
+                " Most of the time the default for an option is the current channel or yourself. \n";
+            s += String.Format("{0,-24} {1,-12}\n", "Command", "Description");
+
+            foreach (var command in _commandService.Commands.Where(cmd => cmd.Module.Name == "AdminModule"))
+            {
+
+                String nextMsg = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
+                if (s.Length + nextMsg.Length > 2000)
+                {
+                    await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+                    s = "";
+                }
+                else
+                {
+                    s += nextMsg;
+                }
+
+            }
+
+            if (s.Length > 0)
+                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+        }
+
         [Command("setmodchannel"), Summary("(Admin) !setmodchannel #ModChannel [#league_channel] | Sets moderator channel"), RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetModChannel([Summary("#ModChannel")]IChannel modChannel, [Summary("#LeagueChannel")]IChannel leagueChannel = null)
         {

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
 {
+    [Name("ModModule")]
     [RequireModPermission]
     public class CommandModModule : ModuleBase<SocketCommandContext>
     {
@@ -29,7 +30,33 @@ namespace BanjoBotCore.Controller
             _commandController = commandController;
         }
 
-        // Moderator commands
+        [Command("modhelp"), Summary("Shows all Commands"), Alias(new string[] { "mh", "m?" })]
+        public async Task Help()
+        {
+            String s = "Some commands have options marked with [], e.g. [#league_channel]." +
+                " Most of the time the default for an option is the current channel or yourself. \n";
+            s += String.Format("{0,-24} {1,-12}\n", "Command", "Description");
+
+            foreach (var command in _commandService.Commands.Where(cmd => cmd.Module.Name == "ModModule"))
+            {
+
+                String nextMsg = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
+                if (s.Length + nextMsg.Length > 2000)
+                {
+                    await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+                    s = "";
+                }
+                else
+                {
+                    s += nextMsg;
+                }
+
+            }
+
+            if (s.Length > 0)
+                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
+        }
+
         [Command("end"), Summary("(Moderator) !end <match-nr #> <Red | Blue | Draw> | Ends a game. The Match_ID can be found via !gg command, it is the number in the brackets")]
         public async Task EndGame([Summary("matchID")]int match, [Summary("team")]Teams team)
         {
@@ -129,8 +156,8 @@ namespace BanjoBotCore.Controller
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)channel;
             await _commandController.ListPlayers(Context.Channel, socketGuildChannel);
-
         }
+
         [Command("whois"), Summary("!whois <discord_id> | Finds username by discord-id")]
         public async Task WhoIs(ulong id)
         {
@@ -144,9 +171,6 @@ namespace BanjoBotCore.Controller
                 await Context.Channel.SendMessageAsync(user.Username);
             }
         }
-
-    
-
     }
 
     public class RequireModPermission : PreconditionAttribute
