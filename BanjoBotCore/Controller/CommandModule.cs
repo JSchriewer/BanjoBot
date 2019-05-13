@@ -179,13 +179,13 @@ namespace BanjoBotCore {
             await _commandController.VoteMatchResult(Context.Channel, socketGuildChannel, Context.User, Teams.Draw);
         }
 
-        [Command("topmmr"), Summary("Shows the top 5 players"), Alias(new string[] { "top", "t" }), RequireLeagueChannel]
-        public async Task TopMMR() {
+        [Command("topmmr"), Summary("Shows the top 10 players"), Alias(new string[] { "top", "t" }), RequireLeagueChannel]
+        public async Task TopMMR([Summary("Season")]int season = -1) {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.ShowTopMMR(Context.Channel, socketGuildChannel, Context.User);
+            await _commandController.ShowTopMMR(Context.Channel, socketGuildChannel, Context.User,season);
         }
 
-        [Command("rank"), Summary("Shows the top 5 players"), Alias(new string[] { "r" }), RequireLeagueChannel]
+        [Command("rank"), Summary("Shows the player's rank"), Alias(new string[] { "r" }), RequireLeagueChannel]
         public async Task Rank()
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;

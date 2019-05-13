@@ -45,8 +45,9 @@ namespace BanjoBotCore.Controller {
             if (message.Content.StartsWith("##")) return;
 
             int argPos = 0;
-            if (!ParseTriggers(message, ref argPos)) return;
+            if (!ParseTriggers(message, ref argPos)) return;     
             var context = new SocketCommandContext(_client, message);
+            log.Info($"{context.User.Username} tries to execute '{context.Message}' in {context.Channel}.");
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
             
             //if (result is SearchResult search && !search.IsSuccess)

@@ -213,7 +213,6 @@ namespace BanjoBotCore
                     _log.Info("Bot reconnected to : " + server.Name + "(" + server.Id + ")");
                     await UpdateDiscordInformation(server);
                 }
-
             }
         }
 
@@ -274,11 +273,15 @@ namespace BanjoBotCore
             _connectedServers.Remove(socketGuild);
 
             //Workaround for https://github.com/RogueException/Discord.Net/issues/960
-            Thread.Sleep(10000);
-            if (!_connectedServers.Contains(socketGuild)) { 
-                _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
-                Environment.Exit(1);
-            }
+            Task.Run(async () =>
+            {
+                Thread.Sleep(30000);
+
+                if (!socketGuild.IsConnected) { 
+                    _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
+                    Environment.Exit(1);
+                }
+            });
 
         }
 

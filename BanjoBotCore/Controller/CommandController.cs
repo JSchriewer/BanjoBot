@@ -476,13 +476,17 @@ namespace BanjoBotCore.Controller
             await ShowPlayerProfile(channel, socketGuildChannel, user, lc.League.Season);
         }
 
-        public async Task ShowTopMMR(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        public async Task ShowTopMMR(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int pSeason)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
 
+            int season = pSeason;
+            if (season == -1)
+                season = lc.League.Season;
+
             // Sort dictionary by MMR
-            List<Player> leaderboard = lc.League.GetLeaderBoard();
+            List<Player> leaderboard = lc.League.GetLeaderBoard(season);
 
             bool inTopTen = false;
             string message = "Top 10 players by MMR: \n";
@@ -494,7 +498,7 @@ namespace BanjoBotCore.Controller
                     if (p == player)
                         inTopTen = true;
 
-                    message += "#" + (i + 1) + " " + p.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + "\n";
+                    message += "#" + (i + 1) + " " + p.PlayerMMRString(lc.League.LeagueID, season) + "\n";
                     i++;
                 }
 
@@ -502,7 +506,7 @@ namespace BanjoBotCore.Controller
             if (!inTopTen) { 
                 message += "-------------------------------------------------\n";
                 int rank = leaderboard.IndexOf(player) + 1;
-                message += "#" + rank + " " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + "\n";
+                message += "#" + rank + " " + player.PlayerMMRString(lc.League.LeagueID, season) + "\n";
             }
             await SendTempMessage(channel, message);
         }
