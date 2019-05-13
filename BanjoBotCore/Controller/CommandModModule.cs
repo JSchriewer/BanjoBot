@@ -128,7 +128,7 @@ namespace BanjoBotCore.Controller
         public async Task ListPlayer([Summary("#Channel")]IChannel channel)
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)channel;
-            await _commandController.ListPlayer(Context.Channel, socketGuildChannel);
+            await _commandController.ListPlayers(Context.Channel, socketGuildChannel);
 
         }
         [Command("whois"), Summary("!whois <discord_id> | Finds username by discord-id")]

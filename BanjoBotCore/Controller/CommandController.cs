@@ -524,7 +524,8 @@ namespace BanjoBotCore.Controller
             }
 
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
-            if (player != null) { 
+            if (player != null)
+            {
                 await SendMessage(channel, "You are already registered");
                 return;
             }
@@ -702,10 +703,9 @@ namespace BanjoBotCore.Controller
                 if (i < 10)
                 {
                     PlayerStats stats = sortedDict.ElementAt(i).GetLeagueStat(lc.League.LeagueID, lc.League.Season);
-                    string username = sortedDict.ElementAt(i).Name.Length > 8
-                        ? sortedDict.ElementAt(i).Name.Substring(0, 8)
-                        : sortedDict.ElementAt(i).Name;
-                    args = new object[] { username, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
+                    string name = sortedDict.ElementAt(i).User != null ? sortedDict.ElementAt(i).Name : "unknown";
+                    name = name.Length > 13 ? name.Substring(0, 12) : name;
+                    args = new object[] { name, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
                     topPlayers += String.Format("{0,-10} {1,-10} {2,-10} {3,-10} {4,-10}\n", args);
                 }
             }
@@ -752,8 +752,9 @@ namespace BanjoBotCore.Controller
                         await SendMessage(channel, "```" + s + "```");
                         s = "";
                     }
-                    string name = leagueApplicant.User.Username.Length >= 13 ? leagueApplicant.User.Username.Substring(0, 12) : leagueApplicant.User.Username;
-                    args = new object[] { leagueApplicant.User.Id, name, leagueApplicant.SteamID, STEAM_PROFILE_URL + leagueApplicant.SteamID, lc.League.Name };
+                    string name = leagueApplicant.User != null ? leagueApplicant.Name : "unknown";
+                    name = name.Length  > 13 ? name.Substring(0, 12) : name;
+                    args = new object[] { leagueApplicant.discordID, name, leagueApplicant.SteamID, STEAM_PROFILE_URL + leagueApplicant.SteamID, lc.League.Name };
                     s += String.Format("{0,-24} {1,-12} {2,-24} {3,-64} {4,-24}\n", args);
                 }
             }
@@ -761,7 +762,7 @@ namespace BanjoBotCore.Controller
             await SendMessage(channel, "```" + s + "```");
         }
 
-        public async Task ListPlayer(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
+        public async Task ListPlayers(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             if (lc == null)
@@ -784,7 +785,8 @@ namespace BanjoBotCore.Controller
                     s = "";
                 }
                 PlayerStats Stats = player.GetLeagueStat(lc.League.LeagueID, lc.League.Season);
-                string name = player.Name.Length >= 13 ? player.Name.Substring(0, 12) : player.Name;
+                string name = player.User != null ? player.Name : "unknown";
+                name = name.Length > 13 ? name.Substring(0, 12) : name;
                 args = new object[]
                 {
                     player.User.Id, name, player.SteamID,Stats.MatchCount,

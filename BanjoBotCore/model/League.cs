@@ -30,7 +30,7 @@ namespace BanjoBotCore {
         {
             foreach (Player player in RegisteredPlayers)
             {
-                if (player.User.Id == id) {
+                if (player.discordID == id) {
                     return player;
                 }
             }
@@ -41,7 +41,7 @@ namespace BanjoBotCore {
 
         public Player GetApplicantByDiscordID(ulong id) {
             foreach (Player player in Applicants) {
-                if (player.User.Id == id)
+                if (player.discordID == id)
                     return player;
             }
             return null;
