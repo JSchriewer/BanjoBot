@@ -123,9 +123,10 @@ namespace BanjoBotCore
                 .AddSingleton(
                     new CommandService(new CommandServiceConfig { CaseSensitiveCommands = false, ThrowOnError = false }))
                 .AddSingleton(_databaseController)
-                .AddSingleton(_commandController) //Should not be a singleton service, multiple instance are fine
+                .AddSingleton(_commandController) //Should not be a singleton service, multiple instance should be fine
                 .AddSingleton<IConfiguration>(_config);
             var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
+
             // Autowire and create these dependencies now
             //provider.GetService<LogAdaptor>();
             //provider.GetService<TagService>();

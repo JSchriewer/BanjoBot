@@ -9,6 +9,7 @@ using Discord.WebSocket;
 using log4net.Core;
 using log4net.Repository.Hierarchy;
 using log4net;
+using Discord;
 
 namespace BanjoBotCore.Controller {
     class CommandHandler
@@ -23,15 +24,17 @@ namespace BanjoBotCore.Controller {
 
         public CommandHandler(IServiceProvider provider) {
             _provider = provider;
-            _client = (DiscordSocketClient)_provider.GetService(typeof(DiscordSocketClient));
-            _client.MessageReceived += ProcessCommandAsync;
+            _client = (DiscordSocketClient)_provider.GetService(typeof(DiscordSocketClient));            
             _commands = (CommandService)_provider.GetService(typeof(CommandService));
+
             //var log = _provider.GetService<LogAdaptor>();
             //_commands.Log += log.LogCommand;
             //_logger = _provider.GetService<Logger>().ForContext<CommandService>();
         }
 
         public async Task ConfigureAsync() {
+            _client.MessageReceived += ProcessCommandAsync;
+            //  _command.CommandExecuted += OnCommandExecutedAsync;
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
 
@@ -43,10 +46,7 @@ namespace BanjoBotCore.Controller {
             int argPos = 0;
             if (!ParseTriggers(message, ref argPos)) return;
             var context = new SocketCommandContext(_client, message);
-            log.Info(message.Author.Username + ": " + message);
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
-            if (!result.IsSuccess)
-                log.Info(result.ErrorReason);
             
             //if (result is SearchResult search && !search.IsSuccess)
             //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
@@ -74,6 +74,24 @@ namespace BanjoBotCore.Controller {
 
 
             return flag;
+        }
+
+        public async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
+        {
+            // We have access to the information of the command executed,
+            // the context of the command, and the result returned from the
+            // execution in this event.
+
+            // We can tell the user what went wrong
+            if (!string.IsNullOrEmpty(result?.ErrorReason))
+            {
+                await context.Channel.SendMessageAsync(result.ErrorReason);
+            }
+
+            // ...or even log the result (the method used should fit into
+            // your existing log handler)
+            var commandName = command.IsSpecified ? command.Value.Name : "A command";
+            log.Info("CommandExecution by " + context.User.Username + " : " + commandName);
         }
     }
 }
