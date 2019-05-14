@@ -42,6 +42,7 @@ namespace BanjoBotCore.Controller {
         private async Task ProcessCommandAsync(SocketMessage pMsg) {
             var message = pMsg as SocketUserMessage;
             if (message == null) return;
+            if (pMsg.Channel is IDMChannel) return;
             if (message.Content.StartsWith("##")) return;
 
             int argPos = 0;

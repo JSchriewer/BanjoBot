@@ -14,7 +14,6 @@ namespace BanjoBotCore.Controller
     {
         //Refactor
         //nested Precondition classes to reduce duplicated code
-        //mod check precondition class
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
         
         private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
