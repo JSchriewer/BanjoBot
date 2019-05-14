@@ -1094,6 +1094,7 @@ namespace BanjoBotCore.Controller
             
             IMessageChannel channel = e.League.DiscordInformation.Channel as IMessageChannel;
             await SendMessage(channel, "Lobby closed");
+            await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
         }
 
         public async void LobbyCreated(object sender, LeagueEventArgs e)
