@@ -63,7 +63,6 @@ namespace BanjoBotCore {
 
         // Vote Constructor
         public MatchResult(Lobby game) {
-            // Manually closed by vote or moderator
             MatchID = game.MatchID;
             LeagueID = game.League.LeagueID;
             SteamMatchID = 0;
@@ -76,15 +75,29 @@ namespace BanjoBotCore {
 
             MatchPlayerStats stats = null;
             foreach (var player in game.WaitingList) {
-                if ((game.BlueList.Contains(player) && game.Winner == Teams.Blue) ||
-                    (game.RedList.Contains(player) && game.Winner == Teams.Red))
+                if(Winner == Teams.None)
                 {
-                    stats = new MatchPlayerStats(this, player, 0, 0, Winner, true);
+                    stats = new MatchPlayerStats(this, player, 0, 0, Teams.None, false);
                 }
-                else
+                else if(Winner == Teams.Draw)
                 {
-                    stats = new MatchPlayerStats(this, player, 0, 0, Winner, false);
+                    stats = new MatchPlayerStats(this, player, 0, 0, Teams.Draw, false);
                 }
+                else if (game.BlueList.Contains(player))
+                {
+                    if (game.Winner == Teams.Blue)
+                        stats = new MatchPlayerStats(this, player, 0, 0, Teams.Blue, true);
+                    else
+                        stats = new MatchPlayerStats(this, player, 0, 0, Teams.Blue, false);
+                }
+                else if (game.RedList.Contains(player))
+                {
+                    if(game.Winner == Teams.Red)
+                        stats = new MatchPlayerStats(this, player, 0, 0, Teams.Red, true);
+                    else
+                        stats = new MatchPlayerStats(this, player, 0, 0, Teams.Red, false);
+                }
+
                 PlayerMatchStats.Add(stats);
             }
         }

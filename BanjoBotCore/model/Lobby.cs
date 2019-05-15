@@ -22,7 +22,7 @@ namespace BanjoBotCore
         public List<Player> WaitingList { get; set; }
         public List<Player> RedList { get; set; }
         public List<Player> BlueList { get; set; }
-        public Teams Winner { get; set; }
+        public Teams Winner { get; set; } = Teams.None;
         public List<Player> CancelCalls { get; set; }
         public List<Player> RedWinCalls { get; set; }
         public List<Player> BlueWinCalls { get; set; }

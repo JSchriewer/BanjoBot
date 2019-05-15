@@ -159,14 +159,24 @@ namespace BanjoBotCore
                 {
                     matchResult.League = lc.League;
                     Lobby lobby = null;
+                    Boolean lobbyOpen = false;
+                    //Restore games
                     if (matchResult.Winner == Teams.None)
                     {
-                        // Restore Lobby
                         lobby = new Lobby(lc.League);
                         lobby.MatchID = matchResult.MatchID;
                         lobby.League = lc.League;
-                        lobby.HasStarted = true;
-                        lc.GamesInProgress.Add(lobby);
+                  
+                        if (matchResult.PlayerMatchStats[0].Team == Teams.None)
+                        {
+                            lc.Lobby = lobby;
+                        }
+                        else
+                        {
+                            // Restore running games
+                            lobby.HasStarted = true;
+                            lc.GamesInProgress.Add(lobby);
+                        }
                     }
 
                     foreach (var stats in matchResult.PlayerMatchStats)
@@ -178,15 +188,19 @@ namespace BanjoBotCore
 
                             // Restore Lobby Details
                             lobby.Host = player;
-                            player.CurrentGame = lobby;
                             lobby.WaitingList.Add(player);
-                            if (stats.Team == Teams.Blue)
-                            {
-                                lobby.BlueList.Add(player);
-                            }
-                            else
-                            {
-                                lobby.RedList.Add(player);
+
+                            // Assign teams if the lobby has started
+                            if (lobby.HasStarted) {
+                                player.CurrentGame = lobby;
+                                if (stats.Team == Teams.Blue)
+                                {
+                                    lobby.BlueList.Add(player);
+                                }
+                                else
+                                {
+                                    lobby.RedList.Add(player);
+                                }
                             }
                         }
 

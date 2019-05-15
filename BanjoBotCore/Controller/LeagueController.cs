@@ -60,7 +60,7 @@ namespace BanjoBotCore
             if (Lobby.Host != player)
                 throw new Exception(player.User.Mention + " only the host (" + Lobby.Host.Name + ") can start the game.");
 
-            if (Lobby.WaitingList.Count < 8)
+            if (Lobby.WaitingList.Count < Lobby.MAXPLAYERS)
                 throw new Exception(player.User.Mention + " you need 8 players to start the game.");
 
 
@@ -72,9 +72,8 @@ namespace BanjoBotCore
 
             try
             {
-                int match_id = await _database.InsertMatch(League.LeagueID, League.Season, Lobby.BlueList, Lobby.RedList);
-                Lobby.MatchID = match_id;
                 Lobby.StartGame();
+                await _database.UpdateMatchResult(new MatchResult(Lobby));
                 GamesInProgress.Add(Lobby);
                 Lobby = null;
             }
@@ -87,9 +86,11 @@ namespace BanjoBotCore
 
         private async Task<Lobby> CreateLobby(Player host)
         {
-            Lobby game = new Lobby(host, League);
-            Lobby = game;
-            return game;
+            Lobby lobby = new Lobby(host, League);
+            Lobby = lobby;
+            int match_id = await _database.InsertMatch(new MatchResult(lobby));
+            Lobby.MatchID = match_id;
+            return lobby;
         }
 
         public async Task<Player> RegisterPlayer(SocketGuildUser user, ulong steamID)
@@ -164,54 +165,67 @@ namespace BanjoBotCore
         }
         private async Task SaveMatchResult(Teams winnerTeam, MatchResult match)
         {
-            List<Player> winner = new List<Player>();
-            List<Player> looser = new List<Player>();
-            foreach (var stats in match.PlayerMatchStats)
-            {
-                Player player = League.RegisteredPlayers.Find(p => p.SteamID == stats.SteamID);
-                if (stats.Win)
-                    winner.Add(player);
-                else
-                    looser.Add(player);
-            }
-            int mmrAdjustment = await MatchMaker.CalculateMmrAdjustment(winner, looser, League.LeagueID, League.Season);
-
-            //Adding Details to Match-Object
-            match.Date = DateTime.Now;
-
-            foreach (var stats in match.PlayerMatchStats)
-            {
-                Player player = League.RegisteredPlayers.Find(p => p.SteamID == stats.SteamID);
-
-                stats.Match = match;
-                if (stats.Team == winnerTeam)
-                {
-                    stats.MmrAdjustment = mmrAdjustment;
-                    stats.StreakBonus = 2 * player.GetLeagueStats(League.LeagueID, League.Season).Streak;
-                    stats.Win = true;
-                }
-                else {
-                    stats.MmrAdjustment = -mmrAdjustment;
-                    stats.StreakBonus = 0;
-                    stats.Win = false;
-                }
-            }
-
             List<Player> allPlayer = new List<Player>();
-            allPlayer.AddRange(winner);
-            allPlayer.AddRange(looser);
 
-            //Saving Data
+            if (winnerTeam == Teams.None)
+                return;
+
+            if (winnerTeam == Teams.Red || winnerTeam == Teams.Blue)
+            {
+                //Adjust player stats
+                List<Player> winner = new List<Player>();
+                List<Player> looser = new List<Player>();
+                foreach (var stats in match.PlayerMatchStats)
+                {
+                    if (stats.Win)
+                        winner.Add(stats.Player);
+                    else
+                        looser.Add(stats.Player);
+                }
+                int mmrAdjustment = await MatchMaker.CalculateMmrAdjustment(winner, looser, League.LeagueID, League.Season);
+
+                allPlayer.AddRange(winner);
+                allPlayer.AddRange(looser);
+                await AdjustPlayerStats(winner, looser,mmrAdjustment);
+
+                //Adding Details to playerstats 
+                foreach (var stats in match.PlayerMatchStats)
+                {
+                    Player player = League.RegisteredPlayers.Find(p => p.SteamID == stats.SteamID);
+
+                    stats.Match = match;
+                    if (stats.Team == winnerTeam)
+                    {
+                        stats.MmrAdjustment = mmrAdjustment;
+                        stats.StreakBonus = 2 * player.GetLeagueStats(League.LeagueID, League.Season).Streak;
+                        stats.Win = true;
+                    }
+                    else
+                    {
+                        stats.MmrAdjustment = -mmrAdjustment;
+                        stats.StreakBonus = 0;
+                        stats.Win = false;
+                    }
+                }
+            }
+
+            //Saving to database
             try
             {
+                // Update Matchresult
                 await _database.UpdateMatchResult(match);
                 League.Matches.Add(match);
-                await AdjustPlayerStats(winner, looser);
-                foreach (var player in allPlayer)
+
+                // Updating Playerstats
+                if (winnerTeam == Teams.Red || winnerTeam == Teams.Blue)
                 {
-                    await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
-                    player.Matches.Add(match);
+                    foreach (var player in allPlayer)
+                    {
+                        await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
+                        player.Matches.Add(match);
+                    }
                 }
+            
             }
             catch (Exception e)
             {
@@ -237,23 +251,15 @@ namespace BanjoBotCore
                 await lobby.StartMessage.UnpinAsync();
             }
 
-            if (winnerTeam == Teams.Draw) {
-                await DrawMatch(lobby);
-                return;
-            }
-
             if (match == null)
                 match = new MatchResult(lobby);
 
            
-            await SaveMatchResult(winnerTeam, match);
-           
-         
+            await SaveMatchResult(winnerTeam, match);         
         }
 
-        //League logic does not apply on public games 
-        //if(lobby != null) why is even there?
         public async Task CloseLobbyByEvent(MatchResult matchResult) {
+            //Check if match is hosted here on discord
             Lobby lobby = null;
             foreach (var game in GamesInProgress) {
                 if (game.MatchID == matchResult.MatchID) {
@@ -264,27 +270,11 @@ namespace BanjoBotCore
             if (lobby != null)
             {
                 await CloseLobbyByCommand(lobby, matchResult.Winner, matchResult);
-            }
-            else
-            {                
-                await SaveMatchResult(matchResult.Winner, matchResult);
-            }
-                
+            }                
         }
 
-        public async Task DrawMatch(Lobby game)
+        public async Task AdjustPlayerStats(List<Player> winner, List<Player> looser, int mmrAdjustment)
         {
-            foreach (var player in game.WaitingList)
-            {
-                player.CurrentGame = null;
-            }
-            await _database.DrawMatch(game.MatchID);
-        }
-
-        public async Task AdjustPlayerStats(List<Player> winner, List<Player> looser)
-        {
-            int mmrAdjustment = await MatchMaker.CalculateMmrAdjustment(winner, looser, League.LeagueID, League.Season);
-
             foreach (var user in winner)
             {
                 user.IncWins(League.LeagueID, League.Season);
@@ -542,7 +532,7 @@ namespace BanjoBotCore
             string message = "";
             if (League.DiscordInformation.LeagueRole != null)
                 message = League.DiscordInformation.LeagueRole.Mention;
-
+            
             if (lobby?.WaitingList.Count == 1)
             {
                 foreach (var player in startedGame.WaitingList)
@@ -550,6 +540,10 @@ namespace BanjoBotCore
                     if (player.User.Id != playerToRemove.Id && !Lobby.WaitingList.Contains(player))
                         Lobby.AddPlayer(player);
                 }
+            }
+            else
+            {
+                throw new Exception("There is already a open Lobby with more than 1 player, please rejoin yourself");
             }
            
             await OnLobbyChanged();
@@ -620,6 +614,8 @@ namespace BanjoBotCore
 
         protected async Task OnLobbyChanged()
         {
+            await _database.UpdateMatchResult(new MatchResult(Lobby));
+
             EventHandler<LeagueEventArgs> handler = LobbyChanged;
             LeagueEventArgs args = new LeagueEventArgs();
             args.League = League;
