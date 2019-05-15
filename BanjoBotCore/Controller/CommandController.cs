@@ -57,13 +57,18 @@ namespace BanjoBotCore.Controller
             }
 
             await SendMessage(channel, player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + " has joined the lobby. (" + lc.Lobby.WaitingList.Count() + "/8)");
+            await SendPrivateMessage(player.User as IGuildUser, "Password for the Dota 2 lobby: " + lc.Lobby.Password);
 
             if (lc.Lobby.WaitingList.Count() == 8)
             {
-                await SendMessage(channel, lc.Lobby.Host.User.Mention + ", The lobby is full. Type !startgame to start the game");
-                await SendPrivateMessage(lc.Lobby.Host.User as IGuildUser, "The lobby is full. Type !startgame to start the game");
+                foreach (var p in lc.Lobby.WaitingList)
+                {
+                    if(p == lc.Lobby.Host)
+                        await SendPrivateMessage(lc.Lobby.Host.User as IGuildUser, $"The lobby is full. Please host a lobby in Dota 2 (Password: {lc.Lobby.Password}). Once the lobby is full and ready type !startgame to get the teams");
+                    else
+                        await SendPrivateMessage(p.User as IGuildUser, "The lobby is full, please join the Dota 2 lobby. Password: " + lc.Lobby.Password);
+                }
             }
-            
         }
 
         public async Task LeaveLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -261,12 +266,6 @@ namespace BanjoBotCore.Controller
             }
             lc.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await lc.Lobby.StartMessage.PinAsync();
-
-            String password = Lobby.GeneratePassword(6);
-            foreach (var p in lc.Lobby.WaitingList)
-            {
-                await SendPrivateMessage(p.User as IGuildUser, "BBL#"+ lc.Lobby.MatchID + " has been started. Password: " + password);
-            }
         }
 
         public async Task CloseLobbyByModerator(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int matchID, Teams team)

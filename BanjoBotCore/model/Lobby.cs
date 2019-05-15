@@ -29,27 +29,15 @@ namespace BanjoBotCore
         public List<Player> DrawCalls { get; set; }
         public bool HasStarted { get; set; }
         public int MatchID { get; set; }
+        public String Password { get;}
         public IUserMessage StartMessage { get; set; }
+        
 
-        private List<IObserver<Lobby>> observers = new List<IObserver<Lobby>>();
-
-        /// <summary>
-        /// Game constructor. Queries database for game name and binds Host to game.
-        /// </summary>
-        /// <param name="host">User who hosted the game.</param>
-        public Lobby(Player host, League league)
+        public Lobby(Player host, League league) : this(league)
         {
             Host = host;
-            League = league;
-            HasStarted = false;
-            WaitingList = new List<Player>();
-            RedList = new List<Player>();
-            BlueList = new List<Player>();
-            CancelCalls = new List<Player>();
-            BlueWinCalls = new List<Player>();
-            RedWinCalls = new List<Player>();
-            DrawCalls = new List<Player>();
             WaitingList.Add(host);
+        
         }
 
         public Lobby(League league)
@@ -63,6 +51,7 @@ namespace BanjoBotCore
             BlueWinCalls = new List<Player>();
             RedWinCalls = new List<Player>();
             DrawCalls = new List<Player>();
+            Password = GeneratePassword(6);
         }
 
 
@@ -128,6 +117,7 @@ namespace BanjoBotCore
         }
 
         /// <summary>
+        /// TODO: Move to MatchMaker and replace with SetTeams(List<Players> team1, List<Players> team2)
         /// Assigns players in waiting list to teams of roughly equal MMR.
         /// By Kael
         /// </summary>
