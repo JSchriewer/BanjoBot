@@ -64,11 +64,7 @@ namespace BanjoBotCore
 
             _log.Info("Initialising...");
             await Initialise();
-
-            _log.Info("Loading data from database...");
             await LoadLeagueInformation();
-            await LoadPlayerBase();
-            await LoadMatchHistory();
     
             String token = _config.GetValue<String>("Token:Discord");
             await _client.LoginAsync(TokenType.Bot, token);
@@ -117,97 +113,114 @@ namespace BanjoBotCore
 
         private async Task LoadLeagueInformation()
         {
-
             _log.Info("Loading league information...");
 
             List<League> leagues = await _databaseController.GetLeagues();
             await _leagueCoordinator.AddLeague(leagues,_commandController);
         }
 
-        private async Task LoadPlayerBase()
+        private async Task LoadPlayerBase(League league)
         {
-            _log.Info("Loading playerbase...");
-            List<Player> allPlayers = await _databaseController.GetPlayerBase(_leagueCoordinator);
+            _log.Info($"Loading player base of {league.Name}({league.LeagueID})");
+            LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
+            List<Player> allPlayers = await _databaseController.GetPlayerBase(league.LeagueID);
             foreach (Player player in allPlayers)
             {
-                foreach (var playerLeagueStat in player.PlayerStats)
+                SocketGuildUser user = league.DiscordInformation.DiscordServer.GetUser(player.discordID);
+                if (user != null)
                 {
-                    LeagueController lc = _leagueCoordinator.GetLeagueController(playerLeagueStat.LeagueID);
+                    player.User = league.DiscordInformation.DiscordServer.GetUser(player.discordID);
+
                     if (!lc.League.RegisteredPlayers.Contains(player))
                     {
                         lc.League.RegisteredPlayers.Add(player);
                     }
                 }
-
+                else
+                {
+                    //_log.Debug($"Could not find SocketGuildUser({player.discordID})");
+                }
             }
-
-            _log.Info("Loading Applicants...");
-            foreach (var lc in _leagueCoordinator.LeagueControllers)
+            
+            List<Player> applicants = await _databaseController.GetApplicants(lc.League.LeagueID);
+            foreach (Player applicant in applicants)
             {
-                lc.League.Applicants = await _databaseController.GetApplicants(_leagueCoordinator, lc.League);
+                SocketGuildUser user = league.DiscordInformation.DiscordServer.GetUser(applicant.discordID);
+                if (user != null)
+                {
+                    applicant.User = user;
+                    if (!lc.League.Applicants.Contains(applicant))
+                    {
+                        lc.League.Applicants.Add(applicant);
+                    }
+                }
+                else
+                {
+                    //_log.Debug($"Could not find SocketGuildUser({applicant.discordID})");
+                }
+               
             }
         }
 
-        private async Task LoadMatchHistory()
+        private async Task LoadMatchHistory(League league)
         {
-            _log.Info("Loading match history...");
-            foreach (var lc in _leagueCoordinator.LeagueControllers)
+            _log.Info($"Loading match history of {league.Name}({league.LeagueID})");
+            List<MatchResult> matches = await _databaseController.GetMatchHistory(league.LeagueID);
+            league.Matches = matches;
+            foreach (var matchResult in matches)
             {
-                List<MatchResult> matches = await _databaseController.GetMatchHistory(lc.League.LeagueID);
-                lc.League.Matches = matches;
-                foreach (var matchResult in matches)
+                matchResult.League = league;
+                Lobby lobby = null;
+                Boolean lobbyOpen = false;
+
+                //Restore games
+                LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
+                if (matchResult.Winner == Teams.None)
                 {
-                    matchResult.League = lc.League;
-                    Lobby lobby = null;
-                    Boolean lobbyOpen = false;
-                    //Restore games
-                    if (matchResult.Winner == Teams.None)
-                    {
-                        lobby = new Lobby(lc.League);
-                        lobby.MatchID = matchResult.MatchID;
-                        lobby.League = lc.League;
+                    lobby = new Lobby(lc.League);
+                    lobby.MatchID = matchResult.MatchID;
+                    lobby.League = lc.League;
                   
-                        if (matchResult.PlayerMatchStats[0].Team == Teams.None)
-                        {
-                            lc.Lobby = lobby;
-                        }
-                        else
-                        {
-                            // Restore running games
-                            lobby.HasStarted = true;
-                            lc.GamesInProgress.Add(lobby);
-                        }
-                    }
-
-                    foreach (var stats in matchResult.PlayerMatchStats)
+                    if (matchResult.PlayerMatchStats[0].Team == Teams.None)
                     {
-                        if (lobby != null)
-                        {
-                            Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
-                            stats.Player = player;
+                        lc.Lobby = lobby;
+                    }
+                    else
+                    {
+                        // Restore running games
+                        lobby.HasStarted = true;
+                        lc.GamesInProgress.Add(lobby);
+                    }
+                }
 
-                            // Restore Lobby Details
-                            lobby.Host = player;
-                            lobby.WaitingList.Add(player);
+                foreach (var stats in matchResult.PlayerMatchStats)
+                {
+                    if (lobby != null)
+                    {
+                        Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
+                        stats.Player = player;
 
-                            // Assign teams if the lobby has started
-                            if (lobby.HasStarted) {
-                                player.CurrentGame = lobby;
-                                if (stats.Team == Teams.Blue)
-                                {
-                                    lobby.BlueList.Add(player);
-                                }
-                                else
-                                {
-                                    lobby.RedList.Add(player);
-                                }
+                        // Restore Lobby Details
+                        lobby.Host = player;
+                        lobby.WaitingList.Add(player);
+
+                        // Assign teams if the lobby has started
+                        if (lobby.HasStarted) {
+                            player.CurrentGame = lobby;
+                            if (stats.Team == Teams.Blue)
+                            {
+                                lobby.BlueList.Add(player);
+                            }
+                            else
+                            {
+                                lobby.RedList.Add(player);
                             }
                         }
-
-                        Player p = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
-                        if (p != null)
-                            p.Matches.Add(matchResult);
                     }
+
+                    Player p = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
+                    if (p != null)
+                        p.Matches.Add(matchResult);
                 }
             }
         }
@@ -221,18 +234,23 @@ namespace BanjoBotCore
                 if (!IsServerInitialised(server)) {
                     _log.Info("Bot connected to : " + server.Name + "(" + server.Id + ")");
                     await UpdateDiscordInformation(server);
+                    foreach(LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
+                    {
+                        await LoadPlayerBase(lc.League);
+                        await LoadMatchHistory(lc.League);
+                    }
                 }
                 else
                 {
                     _log.Info("Bot reconnected to : " + server.Name + "(" + server.Id + ")");
-                    await UpdateDiscordInformation(server);
+                    await ServerValidation(server);
                 }
             }
         }
 
         private async Task UpdateDiscordInformation(SocketGuild server)
         {
-            _log.Info("Update discord information " + server.Name + "(" + server.Id + ")...");
+            _log.Info("Update discord information of " + server.Name + "(" + server.Id + ")...");
             foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer(server))
             {
                 if (lc.League.DiscordInformation != null)
@@ -242,11 +260,20 @@ namespace BanjoBotCore
                         lc.League.DiscordInformation.DiscordServer = server;
                     }
                 }
+            }
+            _initialisedServers.Add(server);
+        }
+
+        //Validates all discord related data if the server disconnected
+        //Discord accounts, channel, roles might be deleted while the bot is not connected
+        //Working with old discord data might result in a NullPointerException
+        public async Task ServerValidation(SocketGuild server)
+        {
+            foreach (LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
+            {
+                _log.Info("Validating server " + server.Name + "(" + server.Id + ")...");
 
                 //TODO: More Validation (Channels, Roles, ...)
-
-                //Validate Players and update discord references
-                //Users that left the discord server will be removed from the league
                 List<Player> deletedDiscordAccounts = new List<Player>();
                 foreach (var player in lc.League.RegisteredPlayers)
                 {
@@ -279,7 +306,6 @@ namespace BanjoBotCore
                     lc.League.RegisteredPlayers.Remove(player);
                 }
             }
-            _initialisedServers.Add(server);
         }
 
         private async Task ServerDisconnected(SocketGuild socketGuild)
@@ -319,11 +345,6 @@ namespace BanjoBotCore
 
         private async Task OnNewMember(SocketMessage socketMessage)
         {
-            foreach (var socketMessageMentionedUser in socketMessage.MentionedUsers)
-            {
-                if (socketMessageMentionedUser.Id == _client.CurrentUser.Id)
-                    await socketMessage.Channel.SendMessageAsync("Fuck you");
-            }
 
         }
 

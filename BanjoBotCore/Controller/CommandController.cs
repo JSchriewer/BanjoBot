@@ -77,10 +77,6 @@ namespace BanjoBotCore.Controller
 
             if (lc.LobbyExists)
                 await SendMessage(channel, $"{ player.PlayerMMRString(lc.League.LeagueID, lc.League.Season)} has left the lobby. ({lc.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
-            else
-                await SendMessage(channel, $"{ player.PlayerMMRString(lc.League.LeagueID, lc.League.Season)} has left the lobby. (0/{Lobby.MAXPLAYERS})");
-        
-
         }
 
         public async Task KickPlayer(IMessageChannel channel, SocketGuildChannel socketGuildChannel, IUser playerToKick)
@@ -111,8 +107,6 @@ namespace BanjoBotCore.Controller
             
             if(lc.LobbyExists)
                 await SendMessage(channel, $"{ player.PlayerMMRString(lc.League.LeagueID, lc.League.Season)} got kicked from the lobby. ({lc.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
-            else
-                await SendMessage(channel, $"{ player.PlayerMMRString(lc.League.LeagueID, lc.League.Season)} got kicked from the lobby. (0/{Lobby.MAXPLAYERS})");
         }
 
         public async Task CancelLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -1093,7 +1087,7 @@ namespace BanjoBotCore.Controller
             
             IMessageChannel channel = e.League.DiscordInformation.Channel as IMessageChannel;
             await SendMessage(channel, "Lobby closed");
-            await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
+            await UpdateChannelDescription(e.League.DiscordInformation.Channel, 0, e.GamesInProgress.Count);
         }
 
         public async void LobbyCreated(object sender, LeagueEventArgs e)
@@ -1104,6 +1098,7 @@ namespace BanjoBotCore.Controller
             IMessageChannel channel = e.League.DiscordInformation.Channel as IMessageChannel;
             Player host = e.Lobby.Host;
             await SendMessage(channel, $"New Lobby created by {host.PlayerMMRString(e.League.LeagueID, e.League.Season)}. \nType !join to join the game. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
         }
 
         public async void LobbyChanged(object sender, LeagueEventArgs e)
@@ -1113,7 +1108,7 @@ namespace BanjoBotCore.Controller
 
             await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
 
-            if (e.Lobby.WaitingList.Count() == 8)
+            if (e.Lobby.WaitingList.Count() == Lobby.MAXPLAYERS)
             {
                 foreach (var p in e.Lobby.WaitingList)
                 {

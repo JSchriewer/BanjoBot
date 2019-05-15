@@ -400,26 +400,20 @@ namespace BanjoBotCore
 
         }
 
-        public async Task<List<Player>> GetPlayerBase(LeagueCoordinator server)
+        public async Task<List<Player>> GetPlayerBase(int leagueID)
         {
             log.Debug("GetPlayerBase");
             List<Player> result = new List<Player>();
             MySqlCommand command = new MySqlCommand();
-            int leagueCount = server.LeagueControllers.Count;
-            var params1 = new string[leagueCount];
-            for (int i = 0; i < leagueCount; i++)
-            {
-                params1[i] = string.Format("@leagueid{0}", i);
-                command.Parameters.AddWithValue(params1[i], server.LeagueControllers[i].League.LeagueID);
-            }
 
             command.CommandText = string.Format("Select * from players p " +
                                                 "inner join players_leagues pl on p.steam_id = pl.steam_id " +
                                                 "inner join player_stats ps on p.steam_id = ps.steam_id and pl.league_id=ps.league_id " +
-                                                "where pl.league_id IN ({0}) " +
-                                                "AND pl.approved = 1", string.Join(", ", params1));
+                                                "where pl.league_id = @leagueID " +
+                                                "AND pl.approved = 1");
 
-   
+            command.Parameters.AddWithValue("@leagueID", leagueID);
+
             using (MySqlDataReader reader = await ExecuteReader(command))
             {      
                 while (reader.Read()) {
@@ -484,7 +478,7 @@ namespace BanjoBotCore
             return result;
         }
 
-        public async Task<List<Player>> GetApplicants(LeagueCoordinator server, League league)
+        public async Task<List<Player>> GetApplicants(int leagueID)
         {
             log.Debug("GetApplicants");
             List<Player> result = new List<Player>();
@@ -494,7 +488,7 @@ namespace BanjoBotCore
                                   "where pl.league_id = @league_id " +
                                   "AND pl.approved = 0";
 
-            command.Parameters.AddWithValue("@league_id", league.LeagueID);
+            command.Parameters.AddWithValue("@league_id", leagueID);
 
             using (MySqlDataReader reader = await ExecuteReader(command))
             {
