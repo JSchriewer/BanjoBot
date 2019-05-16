@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using BanjoBotCore.Model;
+using Discord;
 using Discord.WebSocket;
 using log4net;
 using System;
@@ -115,7 +116,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.CancelLobby(player);
+                await lc.CancelLobbyByCommand(player);
             }
             catch (InsufficientPermissionException e)
             {
@@ -236,6 +237,7 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
+            //TODO: Should be an event
             // Broadcast match details
             String startmessage = "BBL#" + lc.Lobby.MatchID + " has been started by " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + ".";
             String blueTeam = "Blue Team (" + lc.Lobby.GetTeamMMR(Teams.Blue) + "): ";
@@ -284,10 +286,10 @@ namespace BanjoBotCore.Controller
             else
                 await SendTempMessage(channel, "No games in lobby.");
 
-            if (lc.GamesInProgress.Count > 0)
+            if (lc.LobbyInProgress.Count > 0)
             {
                 String message = "Games in progress: ";
-                foreach (var game in lc.GamesInProgress)
+                foreach (var game in lc.LobbyInProgress)
                 {
                     message += "#" + game.MatchID;
                 }
@@ -356,7 +358,7 @@ namespace BanjoBotCore.Controller
             float tag = 0;
             int statsRecorded = 0;
 
-            List<MatchResult> seasonMatches = player.GetMatchesBySeason(lc.League.LeagueID, season);
+            List<Match> seasonMatches = player.GetMatchesBySeason(lc.League.LeagueID, season);
             if (seasonMatches.Count == 0)
             {
                 await SendPrivateMessage(player.User as IGuildUser, "No stats found");
@@ -426,11 +428,11 @@ namespace BanjoBotCore.Controller
 
             object[] args = new object[] { "Date", "MatchID", "Goals", "Assist", "Steals", "Turnovers", "S/T", "Pickups", "Passes", "PR", "Save", "Points", "PosT", "TAG", "Mmr", "Streak", "Stats", "Hero" };
             String s = String.Format("{0,-12} {1,-8} {17,-10} {2,-8} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8} {8,-8} {9,-8} {10,-8} {11,-8} {12,-8} {13,-8} {14,-8} {15,-8} {16,-8}\n", args);
-            List<MatchResult> allStats = player.GetMatchesBySeason(lc.League.LeagueID, season);
-            IOrderedEnumerable<MatchResult> orderedStats = allStats.OrderByDescending(match => match.Date);
+            List<Match> allStats = player.GetMatchesBySeason(lc.League.LeagueID, season);
+            IOrderedEnumerable<Match> orderedStats = allStats.OrderByDescending(match => match.Date);
             for (int i = 0; i < 10 && i < allStats.Count; i++)
             {
-                MatchResult match = orderedStats.ElementAt(i);
+                Match match = orderedStats.ElementAt(i);
                 MatchPlayerStats stats = await match.GetPlayerStats(player);
                 args = new object[] { DateTime.Parse(stats.Match.Date.ToString()).ToShortDateString(), stats.Match.MatchID, stats.Goals, stats.Assist, stats.Steals, stats.Turnovers, stats.StealTurnDif, stats.Pickups, stats.Passes, stats.PassesReceived, stats.SaveRate, stats.Points, stats.PossessionTime, stats.TimeAsGoalie, stats.MmrAdjustment, stats.StreakBonus, stats.Match.StatsRecorded, stats.HeroID };
                 s += String.Format("{0,-12} {1,-8} {17,-10} {2,-8} {3,-8} {4,-8} {5,-10} {6,-8} {7,-8} {8,-8} {9,-8} {10,-8:P0} {11,-8} {12,-8} {13,-8} {14,-8} {15,-8} {16,-8}\n", args);
@@ -621,7 +623,7 @@ namespace BanjoBotCore.Controller
 
             try
             {
-                await lc.AddPlayerToLeague(player);
+                await lc.AcceptRegistration(player);
             }
             catch (Exception e)
             {
@@ -655,7 +657,7 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-            await lc.RemovePlayer(player);
+            await lc.RemovePlayerFromLeague(player);
 
             await SendMessage(channel,player.User.Mention + "You got a private message!");
             if (!reasoning.Equals(""))
@@ -963,7 +965,7 @@ namespace BanjoBotCore.Controller
             }
         }
 
-        private async Task printGameResult(MatchResult matchResult, IMessageChannel textChannel)
+        private async Task printGameResult(Match matchResult, IMessageChannel textChannel)
         {
             string message = "Closing lobby\n";
             //TODO: +-24
@@ -988,7 +990,7 @@ namespace BanjoBotCore.Controller
 
         }
 
-        private async Task<String> GetGameResultString(MatchResult matchResult)
+        private async Task<String> GetGameResultString(Match matchResult)
         {
             Teams winner = matchResult.Winner;
             League league = matchResult.League;
@@ -1080,7 +1082,7 @@ namespace BanjoBotCore.Controller
             message.DeleteAsync();
         }
 
-        public async void LobbyClosed(object sender, LeagueEventArgs e)
+        public async void LobbyClosed(object sender, LobbyEventArgs e)
         {
             if (e == null)
                 return;
@@ -1090,7 +1092,7 @@ namespace BanjoBotCore.Controller
             await UpdateChannelDescription(e.League.DiscordInformation.Channel, 0, e.GamesInProgress.Count);
         }
 
-        public async void LobbyCreated(object sender, LeagueEventArgs e)
+        public async void LobbyCreated(object sender, LobbyEventArgs e)
         {
             if (e == null)
                 return;
@@ -1101,7 +1103,7 @@ namespace BanjoBotCore.Controller
             await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
         }
 
-        public async void LobbyChanged(object sender, LeagueEventArgs e)
+        public async void LobbyChanged(object sender, LobbyEventArgs e)
         {
             if (e == null)
                 return;
@@ -1125,8 +1127,8 @@ namespace BanjoBotCore.Controller
             if (e == null)
                 return;
 
-            IMessageChannel channel = e.MatchResult.League.DiscordInformation.Channel as IMessageChannel;
-            await printGameResult(e.MatchResult, channel);
+            IMessageChannel channel = e.Match.League.DiscordInformation.Channel as IMessageChannel;
+            await printGameResult(e.Match, channel);
         }
 
         public async void NewApplicant(object sender, RegistrationEventArgs e)

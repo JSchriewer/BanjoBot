@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace BanjoBotCore {
+namespace BanjoBotCore.Model
+{
     public class MatchPlayerStats {
-        public MatchResult Match { get; set; }
+        public Match Match { get; set; }
         public Player Player { get; set; }
         public ulong SteamID { get; set; }
         public int HeroID { get; set; }
@@ -29,7 +30,7 @@ namespace BanjoBotCore {
         public bool Win { get; set; }
 
         // Construction from mysql data
-        public MatchPlayerStats(MatchResult match, ulong steamId, int hero, int goals, int assist, int steals, int turnovers, int stealTurnDif, int pickups, int passes, int passesReceived, float saveRate, int points, int possessionTime, int timeAsGoalie, int mmrAdjustment, int streakBonus, Teams team, bool win) {
+        public MatchPlayerStats(Match match, ulong steamId, int hero, int goals, int assist, int steals, int turnovers, int stealTurnDif, int pickups, int passes, int passesReceived, float saveRate, int points, int possessionTime, int timeAsGoalie, int mmrAdjustment, int streakBonus, Teams team, bool win) {
             Match = match;
             SteamID = steamId;
             HeroID = hero;
@@ -55,7 +56,7 @@ namespace BanjoBotCore {
         public MatchPlayerStats() { 
         }
 
-        public MatchPlayerStats(MatchResult match, Player player, int mmrAdjustment, int streakBonus, Teams team, bool win) {
+        public MatchPlayerStats(Match match, Player player, int mmrAdjustment, int streakBonus, Teams team, bool win) {
             Match = match;
             Player = player;
             SteamID = player.SteamID;

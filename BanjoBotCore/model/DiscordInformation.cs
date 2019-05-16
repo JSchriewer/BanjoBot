@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 
-namespace BanjoBotCore
+namespace BanjoBotCore.Model
 {
     public class DiscordInformation
     {

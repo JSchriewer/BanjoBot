@@ -165,7 +165,7 @@ namespace BanjoBotCore
         private async Task LoadMatchHistory(League league)
         {
             _log.Info($"Loading match history of {league.Name}({league.LeagueID})");
-            List<MatchResult> matches = await _databaseController.GetMatchHistory(league.LeagueID);
+            List<Match> matches = await _databaseController.GetMatchHistory(league.LeagueID);
             league.Matches = matches;
             foreach (var matchResult in matches)
             {
@@ -189,7 +189,7 @@ namespace BanjoBotCore
                     {
                         // Restore running games
                         lobby.HasStarted = true;
-                        lc.GamesInProgress.Add(lobby);
+                        lc.LobbyInProgress.Add(lobby);
                     }
                 }
 

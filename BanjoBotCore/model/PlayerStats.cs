@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BanjoBotCore {
+namespace BanjoBotCore.Model
+{
     public class PlayerStats {
         public int LeagueID { get; set; }
         public int Season { get; set; }

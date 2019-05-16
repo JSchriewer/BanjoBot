@@ -5,7 +5,8 @@ using Discord.API;
 using Discord.API.Gateway;
 using Discord.WebSocket;
 
-namespace BanjoBotCore {
+namespace BanjoBotCore.Model
+{
     public class League
     {
         public DiscordInformation DiscordInformation { get; set; } = null;
@@ -13,7 +14,7 @@ namespace BanjoBotCore {
         public string Name { get; set; } = "";
         public List<Player> RegisteredPlayers { get; set; }
         public List<Player> Applicants { get; set; }
-        public List<MatchResult> Matches { get; set; }
+        public List<Match> Matches { get; set; }
         public int Season { get; set; }
         public int GameCounter { get; set; }
 
@@ -24,7 +25,7 @@ namespace BanjoBotCore {
             GameCounter = gameCounter;
             RegisteredPlayers = new List<Player>();
             Applicants = new List<Player>();
-            Matches = new List<MatchResult>();
+            Matches = new List<Match>();
         }
 
         public Player GetPlayerByDiscordID(ulong id)

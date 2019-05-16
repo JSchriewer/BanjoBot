@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using BanjoBotCore.Controller;
+using BanjoBotCore.Model;
 using Discord;
 using Discord.WebSocket;
 using log4net;
@@ -13,19 +14,31 @@ namespace BanjoBotCore
 
     //TODO: throw Exception in Remove/AddPLayer() <- bool? removePlayerResult = Lobby.RemovePlayer(user);
     //->Duplicated code LeavePlayer / KickPlayer
-    //TODO: Catch Database Exceptions
+    //TODO: Don't catch database exceptions
+    //->Use try{}finally{} for error handling wherever possible
     
     public class LeagueController
     {
+        private event EventHandler<RegistrationEventArgs> PlayerRegistrationAccepted;
+        private event EventHandler<RegistrationEventArgs> PlayerRegistered;
+        private event EventHandler<LobbyEventArgs> LobbyClosed;
+        private event EventHandler<LobbyPlayerEventArgs> LobbyCanceled;
+        private event EventHandler<LobbyPlayerEventArgs> LobbyHosted;
+        private event EventHandler<LobbyPlayerEventArgs> PlayerKicked;
+        private event EventHandler<LobbyPlayerEventArgs> PlayerJoined;
+        private event EventHandler<LobbyPlayerEventArgs> PlayerLeft;
+        private event EventHandler<LobbyVoteEventArgs> PlayerVoted;
+        private event EventHandler<MatchEventArgs> MatchEnded;
+
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
         public League League;
         public Lobby Lobby { get; set; }
-        public List<Lobby> GamesInProgress { get; set; }
+        public List<Lobby> LobbyInProgress { get; set; }
         private DatabaseController _database;
 
         public LeagueController(League league)
         {
-            GamesInProgress = new List<Lobby>();
+            LobbyInProgress = new List<Lobby>();
             League = league;
             _database = new DatabaseController();
         }
@@ -33,11 +46,16 @@ namespace BanjoBotCore
 
         public async Task RegisterEventListener(ILeagueEventListener listener)
         {
-            LobbyCreated += listener.LobbyCreated;
+            PlayerRegistrationAccepted += listener.AddedPlayerToLeague;
+            PlayerRegistered += listener.ApplicantAdded;
+            LobbyHosted += listener.LobbyCreated;
             LobbyClosed += listener.LobbyClosed;
-            LobbyChanged += listener.LobbyChanged;
+            LobbyCanceled += listener.LobbyCanceled;
+            PlayerVoted += listener.PlayerVoted;
+            PlayerVoted += listener.PlayerKicked;
+            PlayerVoted += listener.PlayerJoined;
+            PlayerVoted += listener.PlayerLeft;
             MatchEnded += listener.MatchEnded;
-            PlayerAdded += listener.AddedPlayerToLeague;
         }
 
         public bool LobbyExists
@@ -45,10 +63,12 @@ namespace BanjoBotCore
             get { return Lobby != null; }
         }
 
-        private async Task CancelLobby()
+        private async Task CancelLobby(Player player = null)
         {
+            Lobby.IsClosed = true;
+            await _database.UpdateLobby(Lobby);
             Lobby = null;
-            await OnLobbyClosed();
+            await OnLobbyCanceled(Lobby, player);
         }
 
         public async Task StartGame(Player player)
@@ -72,10 +92,12 @@ namespace BanjoBotCore
 
             try
             {
-                Lobby.StartGame();
-                await _database.UpdateMatchResult(new MatchResult(Lobby));
-                GamesInProgress.Add(Lobby);
+                Match newMatch = await CreateMatch(Lobby);
+                Lobby.StartGame(newMatch);
+                await _database.UpdateLobby(Lobby);
+                LobbyInProgress.Add(Lobby);
                 Lobby = null;
+                //TODO: Event OnMatchStarted
             }
             catch (Exception e)
             {
@@ -84,12 +106,20 @@ namespace BanjoBotCore
          
         }
 
+        private async Task<Match> CreateMatch(Lobby lobby)
+        {
+            Match newMatch = new Match(lobby);
+            newMatch.MatchID = await _database.InsertMatch(newMatch);
+            return newMatch;
+        }
+
         private async Task<Lobby> CreateLobby(Player host)
         {
             Lobby lobby = new Lobby(host, League);
             Lobby = lobby;
-            int match_id = await _database.InsertMatch(new MatchResult(lobby));
-            Lobby.MatchID = match_id;
+            int lobbyID = await _database.InsertLobby(lobby);
+            Lobby.LobbyID = lobbyID;
+            await OnLobbyHosted(Lobby,host);
             return lobby;
         }
 
@@ -115,7 +145,7 @@ namespace BanjoBotCore
         {
             if (League.DiscordInformation.AutoAccept)
             {
-                await AddPlayerToLeague(player);
+                await AcceptRegistration(player);
             }
             else
             {
@@ -124,7 +154,7 @@ namespace BanjoBotCore
                 {
                     await _database.InsertSignupToLeague(player.SteamID, League);
                     League.Applicants.Add(player);
-                    await OnApplicantAdded(player, League);
+                    await OnPlayerRegistered(player, League);
                 }
                 catch (Exception e)
                 {
@@ -134,7 +164,7 @@ namespace BanjoBotCore
             }
         }
         
-        public async Task AddPlayerToLeague(Player player)
+        public async Task AcceptRegistration(Player player)
         {
             log.Debug("RegisterPlayer: " + player.Name + "(" + player.User.Id + ")");
 
@@ -155,77 +185,48 @@ namespace BanjoBotCore
             }
 
             League.RegisteredPlayers.Add(player);
-            await OnPlayerAdded(player);
+            await OnPlayerRegistrationAccepted(player);
         }
 
-        public async Task RemovePlayer(Player player)
+        public async Task RemovePlayerFromLeague(Player player)
         {
             League.Applicants.Remove(player);
             await _database.DeleteRegistration(player.SteamID, League);
         }
-        private async Task SaveMatchResult(Teams winnerTeam, MatchResult match)
-        {
-            List<Player> allPlayer = new List<Player>();
 
-            if (winnerTeam == Teams.None)
+        private async Task SaveMatchResult(Teams pWinnerTeam, Match match)
+        {
+            if(match == null)
+                return;
+            if (pWinnerTeam == Teams.None)
                 return;
 
-            if (winnerTeam == Teams.Red || winnerTeam == Teams.Blue)
+            List<Player> winnerTeam = new List<Player>();
+            List<Player> loserTeam = new List<Player>();
+            if (pWinnerTeam == Teams.Blue)
             {
-                //Adjust player stats
-                List<Player> winner = new List<Player>();
-                List<Player> looser = new List<Player>();
-                foreach (var stats in match.PlayerMatchStats)
-                {
-                    if (stats.Win)
-                        winner.Add(stats.Player);
-                    else
-                        looser.Add(stats.Player);
-                }
-                int mmrAdjustment = await MatchMaker.CalculateMmrAdjustment(winner, looser, League.LeagueID, League.Season);
-
-                allPlayer.AddRange(winner);
-                allPlayer.AddRange(looser);
-                await AdjustPlayerStats(winner, looser,mmrAdjustment);
-
-                //Adding Details to playerstats 
-                foreach (var stats in match.PlayerMatchStats)
-                {
-                    Player player = League.RegisteredPlayers.Find(p => p.SteamID == stats.SteamID);
-
-                    stats.Match = match;
-                    if (stats.Team == winnerTeam)
-                    {
-                        stats.MmrAdjustment = mmrAdjustment;
-                        stats.StreakBonus = 2 * player.GetLeagueStats(League.LeagueID, League.Season).Streak;
-                        stats.Win = true;
-                    }
-                    else
-                    {
-                        stats.MmrAdjustment = -mmrAdjustment;
-                        stats.StreakBonus = 0;
-                        stats.Win = false;
-                    }
-                }
+                winnerTeam = match.GetTeam(Teams.Blue);
+                loserTeam = match.GetTeam(Teams.Red);
             }
+            else if (pWinnerTeam == Teams.Red)
+            {
+                winnerTeam = match.GetTeam(Teams.Red);
+                loserTeam = match.GetTeam(Teams.Blue);
+            }
+
+            if(pWinnerTeam != Teams.Draw) { 
+                int mmrAdjustment = MatchMaker.CalculateMmrAdjustment(winnerTeam, loserTeam, League.LeagueID, League.Season);
+                await AdjustPlayerStats(winnerTeam, loserTeam, mmrAdjustment);
+            }
+
+    
 
             //Saving to database
             try
             {
                 // Update Matchresult
-                await _database.UpdateMatchResult(match);
+                await _database.UpdateMatch(match);
                 League.Matches.Add(match);
-
-                // Updating Playerstats
-                if (winnerTeam == Teams.Red || winnerTeam == Teams.Blue)
-                {
-                    foreach (var player in allPlayer)
-                    {
-                        await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
-                        player.Matches.Add(match);
-                    }
-                }
-            
             }
             catch (Exception e)
             {
@@ -233,8 +234,7 @@ namespace BanjoBotCore
             }
             finally
             {
-                foreach (var player in allPlayer)
-                    player.CurrentGame = null;
+              
             }
         
 
@@ -242,57 +242,95 @@ namespace BanjoBotCore
 
         }
 
-        public async Task CloseLobbyByCommand(Lobby lobby, Teams winnerTeam, MatchResult match = null)
+        public async Task CloseLobby(Lobby lobby, Teams winnerTeam, Match match = null)
         {
-            GamesInProgress.Remove(lobby);
-            lobby.Winner = winnerTeam;
-            
-            if (lobby.StartMessage != null) {
+            LobbyInProgress.Remove(lobby);
+            lobby.IsClosed = true;
+
+            if (lobby.StartMessage != null)
+            {
                 await lobby.StartMessage.UnpinAsync();
             }
 
             if (match == null)
-                match = new MatchResult(lobby);
+            {
+                match = lobby.Match;
+                match.Winner = winnerTeam;
+                await match.SetMatchResult(winnerTeam);
+            }
 
-           
+            // Save Lobby
+            try
+            {
+                await _database.UpdateLobby(lobby);
+              
+            }
+            finally
+            {
+                // Always close lobby
+                await OnLobbyClosed(Lobby);
+                Lobby = null;
+
+                List<Player> allPlayer = (List<Player>)from stats in match.PlayerMatchStats select stats.Player;
+                foreach (var player in allPlayer)
+                {
+                    player.Matches.Add(match);
+                }
+                foreach (var player in allPlayer)
+                    player.CurrentGame = null;
+            }
+
             await SaveMatchResult(winnerTeam, match);         
         }
 
-        public async Task CloseLobbyByEvent(MatchResult matchResult) {
+        public async Task CloseLobbyByEvent(Match matchResult) {
             //Check if match is hosted here on discord
             Lobby lobby = null;
-            foreach (var game in GamesInProgress) {
-                if (game.MatchID == matchResult.MatchID) {
-                    lobby = game;
+            foreach (var lobbyInProgress in LobbyInProgress) {
+                if (Lobby.Match.MatchID == matchResult.MatchID) {
+                    lobby = lobbyInProgress;
                 }
             }
             matchResult.StatsRecorded = true;
             if (lobby != null)
             {
-                await CloseLobbyByCommand(lobby, matchResult.Winner, matchResult);
+                await CloseLobby(lobby, matchResult.Winner, matchResult);
             }                
         }
 
-        public async Task AdjustPlayerStats(List<Player> winner, List<Player> looser, int mmrAdjustment)
+        public async Task AdjustPlayerStats(List<Player> winnerTeam, List<Player> loserTeam, int mmrAdjustment)
         {
-            foreach (var user in winner)
+            foreach (var player in winnerTeam)
             {
-                user.IncWins(League.LeagueID, League.Season);
-                user.IncMMR(League.LeagueID, League.Season,
-                        mmrAdjustment + 2 * user.GetLeagueStats(League.LeagueID, League.Season).Streak);
-                user.IncStreak(League.LeagueID, League.Season);
-                user.IncMatches(League.LeagueID, League.Season);
+                player.IncWins(League.LeagueID, League.Season);
+                player.IncMMR(League.LeagueID, League.Season,
+                        mmrAdjustment + 2 * player.GetLeagueStats(League.LeagueID, League.Season).Streak);
+                player.IncStreak(League.LeagueID, League.Season);
+                player.IncMatches(League.LeagueID, League.Season);
+
+                try
+                {
+                    await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
+                }
+                finally
+                {
+
+                }
+              
             }
 
-            foreach (var user in looser)
+            foreach (var player in loserTeam)
             {
-                user.IncLosses(League.LeagueID, League.Season);
-                user.SetStreakZero(League.LeagueID, League.Season);
-                user.DecMMR(League.LeagueID, League.Season, mmrAdjustment);
-                user.IncMatches(League.LeagueID, League.Season);
-                if (user.GetLeagueStats(League.LeagueID, League.Season).MMR < 0)
-                    user.SetMMR(League.LeagueID, League.Season, 0);
-            }
+                player.IncLosses(League.LeagueID, League.Season);
+                player.SetStreakZero(League.LeagueID, League.Season);
+                player.DecMMR(League.LeagueID, League.Season, mmrAdjustment);
+                player.IncMatches(League.LeagueID, League.Season);
+                if (player.GetLeagueStats(League.LeagueID, League.Season).MMR < 0)
+                    player.SetMMR(League.LeagueID, League.Season, 0);
+
+                //TODO: try catch?
+                await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
+            }        
         }
 
         public async Task StartNewSeason()
@@ -306,7 +344,7 @@ namespace BanjoBotCore
             }
             
             League.Season++;
-            League.Matches = new List<MatchResult>();
+            League.Matches = new List<Match>();
             League.GameCounter = 0;
             await _database.UpdateLeague(League);
 
@@ -314,8 +352,8 @@ namespace BanjoBotCore
 
         public async Task CloseLobbyByModerator(int matchID, Teams team) {
             Lobby startedGame = null;
-            foreach (var runningGame in GamesInProgress) {
-                if (runningGame.MatchID == matchID) {
+            foreach (var runningGame in LobbyInProgress) {
+                if (runningGame.Match.MatchID == matchID) {
                     startedGame = runningGame;
                     break;
                 }
@@ -324,7 +362,7 @@ namespace BanjoBotCore
             if (startedGame == null)
                 throw new Exception("Vote before hosting another game");
 
-            await CloseLobbyByCommand(startedGame, team);
+            await CloseLobby(startedGame, team);
 
         }
         public async Task HostLobby(Player host)
@@ -335,7 +373,6 @@ namespace BanjoBotCore
                 throw new Exception("Lobby is already open. Only one Lobby may be hosted at a time. \nType !join to join the game.");
 
             Lobby newGame = await CreateLobby(host);
-            await OnLobbyCreated();
         }
 
         public async Task JoinLobby(Player player)
@@ -356,7 +393,7 @@ namespace BanjoBotCore
             if (addPlayerResult == null)
                 throw new Exception(player.User.Mention + " you can not join a game you are already in.");
 
-            await OnLobbyChanged();
+            await OnPlayerJoined(Lobby, player);
         }
 
         public async Task LeaveLobby(Player player)
@@ -371,13 +408,14 @@ namespace BanjoBotCore
             // If player not in game
             if (removePlayerResult == null)
                throw new Exception(player.User.Mention + " you are not in this game.");
-            
-            // If game now empty
-            if(removePlayerResult == false)
-                await CancelLobby();
 
-            if(removePlayerResult == true)
-                await OnLobbyChanged();
+            await OnPlayerLeft(Lobby, player);
+
+            // If game now empty
+            if (removePlayerResult == false)
+                await CancelLobby();
+            
+                
 
         }
 
@@ -394,22 +432,23 @@ namespace BanjoBotCore
             if (removePlayerResult == null)
                 throw new Exception(player.User.Mention + " is not in the game.");
 
+            await OnPlayerKicked(Lobby, player);
+
             // If game now empty
-            else if (removePlayerResult == false) {
+            if (removePlayerResult == false) {
                 await CancelLobby();
             }
-
-            if (removePlayerResult == true)
-                await OnLobbyChanged();
+            
+               
         }
         
-        public async Task CancelLobby(Player player)
+        public async Task CancelLobbyByCommand(Player player)
         {
             if (!LobbyExists)
                 throw new Exception("No games open. Type !hostgame to create a game.");
 
             if (player == Lobby.Host || player.User.Roles.Contains(League.DiscordInformation.ModeratorRole) || player.User.GuildPermissions.Administrator)
-                await CancelLobby();
+                await CancelLobby(player);
             else
                 throw new InsufficientPermissionException("No permission");
         }
@@ -436,8 +475,8 @@ namespace BanjoBotCore
             if (!player.IsIngame)
                 throw new Exception(player.User.Mention + " you are not in a game.");
 
-            Lobby game = player.CurrentGame;
-            if (game.BlueWinCalls.Contains(player))
+            Lobby lobby = player.CurrentGame;
+            if (lobby.BlueWinCalls.Contains(player))
             {
                 if (team == Teams.Blue || team == Teams.Draw)
                 {
@@ -445,23 +484,23 @@ namespace BanjoBotCore
                 }
                 else if (team == Teams.Red)
                 {
-                    game.BlueWinCalls.Remove(player);
-                    game.RedWinCalls.Add(player);
+                    lobby.BlueWinCalls.Remove(player);
+                    lobby.RedWinCalls.Add(player);
                   
                 }
             }
-            else if (game.RedWinCalls.Contains(player))
+            else if (lobby.RedWinCalls.Contains(player))
             {
                 if (team == Teams.Red || team == Teams.Draw) {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
                 else if (team == Teams.Blue) {
-                    game.RedWinCalls.Remove(player);
-                    game.BlueWinCalls.Add(player);
+                    lobby.RedWinCalls.Remove(player);
+                    lobby.BlueWinCalls.Add(player);
                    
                 }
             }
-            else if (game.DrawCalls.Contains(player))
+            else if (lobby.DrawCalls.Contains(player))
             {
                 throw new Exception(player.User.Mention + " you have already voted for this team.");
             }
@@ -470,36 +509,36 @@ namespace BanjoBotCore
                 switch (team)
                 {
                     case Teams.Red:
-                        game.RedWinCalls.Add(player);
+                        lobby.RedWinCalls.Add(player);
                         break;
                     case Teams.Blue:
-                        game.BlueWinCalls.Add(player);
+                        lobby.BlueWinCalls.Add(player);
                         break;
                     case Teams.Draw:
-                        game.DrawCalls.Add(player);
+                        lobby.DrawCalls.Add(player);
                         break;
                 }
             }
 
             Teams winner = Teams.None;
-            if (game.BlueWinCalls.Count == Lobby.VOTETHRESHOLD)
+            if (lobby.BlueWinCalls.Count == Lobby.VOTETHRESHOLD)
                 winner = Teams.Blue;
-            if (game.RedWinCalls.Count == Lobby.VOTETHRESHOLD)
+            if (lobby.RedWinCalls.Count == Lobby.VOTETHRESHOLD)
                 winner = Teams.Red;
-            if (game.DrawCalls.Count == Lobby.VOTETHRESHOLD) 
+            if (lobby.DrawCalls.Count == Lobby.VOTETHRESHOLD) 
                 winner = Teams.Draw;
 
             if(winner != Teams.None)
             {
-                await CloseLobbyByCommand(game, winner);
+                await CloseLobby(lobby, winner);
             }
         }        
 
         public async Task ReCreateLobby(int matchID, IGuildUser playerToRemove)
         {
             Lobby startedGame = null;
-            foreach (var runningGame in GamesInProgress) {
-                if (runningGame.MatchID == matchID)
+            foreach (var runningGame in LobbyInProgress) {
+                if (runningGame.Match.MatchID == matchID)
                 {
                     startedGame = runningGame;
                     break;
@@ -509,7 +548,7 @@ namespace BanjoBotCore
             if (startedGame == null)
                 throw new Exception("Match not found");
 
-            await CloseLobbyByCommand(startedGame, Teams.Draw);
+            await CloseLobby(startedGame, Teams.Draw);
 
             Lobby lobby = null;
             if (!LobbyExists)
@@ -583,13 +622,23 @@ namespace BanjoBotCore
             await _database.UpdateLeague(League);
         }
 
-        protected async Task OnLobbyClosed()
+        protected async Task OnPlayerRegistered(Player player, League league)
         {
-            EventHandler<LeagueEventArgs> handler = LobbyClosed;
-            LeagueEventArgs args = new LeagueEventArgs();
-            args.League = League;
-            args.Lobby = Lobby;
-            args.GamesInProgress = GamesInProgress;
+            EventHandler<RegistrationEventArgs> handler = PlayerRegistered;
+            RegistrationEventArgs args = new RegistrationEventArgs();
+            args.Player = player;
+            args.League = league;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+        protected async Task OnPlayerRegistrationAccepted(Player player)
+        {
+            EventHandler<RegistrationEventArgs> handler = PlayerRegistrationAccepted;
+            RegistrationEventArgs args = new RegistrationEventArgs();
+            args.Player = player;
 
             if (handler != null)
             {
@@ -597,14 +646,12 @@ namespace BanjoBotCore
             }
         }
 
-        protected async Task OnLobbyCreated()
+        protected async Task OnLobbyHosted(Lobby lobby, Player player)
         {
-            await OnLobbyChanged();
-            EventHandler<LeagueEventArgs> handler = LobbyCreated;
-            LeagueEventArgs args = new LeagueEventArgs();
-            args.League = League;
-            args.Lobby = Lobby;
-            args.GamesInProgress = GamesInProgress;
+            EventHandler<LobbyPlayerEventArgs> handler = LobbyHosted;
+            LobbyPlayerEventArgs args = new LobbyPlayerEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
 
             if (handler != null)
             {
@@ -612,49 +659,101 @@ namespace BanjoBotCore
             }
         }
 
-        protected async Task OnLobbyChanged()
+        protected async Task OnLobbyClosed(Lobby lobby)
         {
-            await _database.UpdateMatchResult(new MatchResult(Lobby));
-
-            EventHandler<LeagueEventArgs> handler = LobbyChanged;
-            LeagueEventArgs args = new LeagueEventArgs();
-            args.League = League;
-            args.Lobby = Lobby;
-            args.GamesInProgress = GamesInProgress;
+            EventHandler<LobbyEventArgs> handler = LobbyClosed;
+            LobbyEventArgs args = new LobbyEventArgs();
+            args.Lobby = lobby;
 
             if (handler != null)
             {
                 handler(this, args);
             }
         }
-        protected async Task OnMatchEnded(MatchResult matchResult)
+
+        protected async Task OnLobbyCanceled(Lobby lobby, Player player)
+        {
+            EventHandler<LobbyPlayerEventArgs> handler = LobbyCanceled;
+            LobbyPlayerEventArgs args = new LobbyPlayerEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+
+        protected async Task OnPlayerJoined(Lobby lobby, Player player)
+        {
+            EventHandler<LobbyPlayerEventArgs> handler = PlayerJoined;
+            LobbyPlayerEventArgs args = new LobbyPlayerEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+        protected async Task OnPlayerLeft(Lobby lobby, Player player)
+        {
+            EventHandler<LobbyPlayerEventArgs> handler = PlayerLeft;
+            LobbyPlayerEventArgs args = new LobbyPlayerEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+        protected async Task OnPlayerKicked(Lobby lobby, Player player)
+        {
+            EventHandler<LobbyPlayerEventArgs> handler = PlayerKicked;
+            LobbyPlayerEventArgs args = new LobbyPlayerEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+
+        protected async Task OnPlayerVoted(Lobby lobby, Player player, Teams team)
+        {
+            EventHandler<LobbyVoteEventArgs> handler = PlayerVoted;
+            LobbyVoteEventArgs args = new LobbyVoteEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+            args.Team = team;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+
+        protected async Task OnPlayerVoted(Lobby lobby, Player player, Teams team, Teams previousVote)
+        {
+            EventHandler<LobbyVoteEventArgs> handler = PlayerVoted;
+            LobbyVoteEventArgs args = new LobbyVoteEventArgs();
+            args.Lobby = lobby;
+            args.Player = player;
+            args.Team = team;
+            args.prevVote = previousVote;
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+
+        protected async Task OnMatchEnded(Match matchResult)
         {
             EventHandler<MatchEventArgs> handler = MatchEnded;
             MatchEventArgs args = new MatchEventArgs();
-            args.MatchResult = matchResult;
-
-            if (handler != null)
-            {
-                handler(this, args);
-            }
-        }
-        protected async Task OnApplicantAdded(Player player, League league)
-        {
-            EventHandler<RegistrationEventArgs> handler = ApplicantAdded;
-            RegistrationEventArgs args = new RegistrationEventArgs();
-            args.Player = player;
-            args.League = League;
-
-            if (handler != null)
-            {
-                handler(this, args);
-            }
-        }
-        protected async Task OnPlayerAdded(Player player)
-        {
-            EventHandler<RegistrationEventArgs> handler = PlayerAdded;
-            RegistrationEventArgs args = new RegistrationEventArgs();
-            args.Player = player;
+            args.Match = matchResult;
 
             if (handler != null)
             {
@@ -662,12 +761,6 @@ namespace BanjoBotCore
             }
         }
 
-        public event EventHandler<RegistrationEventArgs> PlayerAdded;
-        public event EventHandler<RegistrationEventArgs> ApplicantAdded;
-        public event EventHandler<LeagueEventArgs> LobbyClosed;
-        public event EventHandler<LeagueEventArgs> LobbyCreated;
-        public event EventHandler<LeagueEventArgs> LobbyChanged;
-        public event EventHandler<MatchEventArgs> MatchEnded;
     }
 
     public class RegistrationEventArgs : EventArgs
@@ -676,16 +769,25 @@ namespace BanjoBotCore
         public League League { get; set; }
     }
 
-    public class LeagueEventArgs : EventArgs
+    public class LobbyEventArgs : EventArgs
     {
-        public League League { get; set; }
         public Lobby Lobby { get; set; }
-        public List<Lobby> GamesInProgress { get; set; }
+    }
+
+    public class LobbyPlayerEventArgs : LobbyEventArgs
+    {
+        public Player Player { get; set; }
+    }
+
+    public class LobbyVoteEventArgs : LobbyPlayerEventArgs
+    {
+        public Teams Team { get; set; }
+        public Teams prevVote { get; set; }
     }
 
     public class MatchEventArgs : EventArgs
     {
-        public MatchResult MatchResult { get; set; }
+        public Match Match { get; set; }
     }
 
     [Serializable]

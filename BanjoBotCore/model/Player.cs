@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Discord.API;
 using Discord.WebSocket;
 
-namespace BanjoBotCore
+namespace BanjoBotCore.Model
 {
     public class Player : IEquatable<Player> {
         public SocketGuildUser User { get; set; }
@@ -15,7 +15,7 @@ namespace BanjoBotCore
         public ulong SteamID { get; set; }
         public Lobby CurrentGame   { get; set; }
         public List<PlayerStats> PlayerStats { get; set; }
-        public List<MatchResult> Matches { get; set; }
+        public List<Match> Matches { get; set; }
 
         public Player(SocketGuildUser discordUser, ulong steamid)
         {
@@ -23,7 +23,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<MatchResult>();
+            Matches = new List<Match>();
             discordID = User.Id;
         }
 
@@ -31,7 +31,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<MatchResult>();
+            Matches = new List<Match>();
         }
 
 
@@ -41,7 +41,7 @@ namespace BanjoBotCore
             SteamID = steamid;
             CurrentGame = null;
             PlayerStats = new List<PlayerStats>();
-            Matches = new List<MatchResult>();
+            Matches = new List<Match>();
         }
 
         public bool Equals(Player other)
@@ -79,10 +79,10 @@ namespace BanjoBotCore
             return stats;
         }
 
-        public List<MatchResult> GetMatchesBySeason(int leagueID, int season)
+        public List<Match> GetMatchesBySeason(int leagueID, int season)
         {
-            List<MatchResult> result = new List<MatchResult>();
-            foreach (MatchResult match in Matches)
+            List<Match> result = new List<Match>();
+            foreach (Match match in Matches)
             {
                 if (match.LeagueID == leagueID && match.Season == season)
                 {
@@ -93,9 +93,9 @@ namespace BanjoBotCore
             return result;
         }
 
-        public List<MatchResult> GetAllMatches(int leagueID) {
-            List<MatchResult> result = new List<MatchResult>();
-            foreach (MatchResult match in Matches) {
+        public List<Match> GetAllMatches(int leagueID) {
+            List<Match> result = new List<Match>();
+            foreach (Match match in Matches) {
                 if (match.LeagueID == leagueID) {
                     result.Add(match);
                 }

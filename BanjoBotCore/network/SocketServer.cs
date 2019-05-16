@@ -5,11 +5,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using BanjoBotCore.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nito.AsyncEx;
 
-namespace BanjoBotCore
+namespace BanjoBotCore.Network
 {
     class SocketServer
     {
@@ -268,7 +269,7 @@ namespace BanjoBotCore
             try
             {
                 Console.WriteLine(json["MatchResult"].ToString());
-                MatchResult match = JsonConvert.DeserializeObject<MatchResult>(json["MatchResult"].ToString());
+                Match match = JsonConvert.DeserializeObject<Match>(json["MatchResult"].ToString());
                 LeagueController lc = null;
 
                 if (match.PlayerMatchStats.Count != 8)
