@@ -7,9 +7,12 @@ using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using BanjoBotCore.persistence;
+using BanjoBotCore.Model;
 
 namespace BanjoBotCore
 {
+    //TODO: Exception handling -> try catch in concrete methods like UpdateMatch, InsertLobby for better Error logging
+    //TODO: Query methods should not have any mode data -> DAO
     public class DatabaseController 
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(DatabaseController));
@@ -93,29 +96,31 @@ namespace BanjoBotCore
             }
         }
 
-        public async Task UpdateMatchResult(MatchResult game)
+        public async Task UpdateMatch(Match match)
         {
-            log.Debug("UpdateMatchResult");
+            log.Debug("Update Match");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "update matches set duration=@duration, date=@date, winner=@winner, steam_match_id=@steam_match_id, stats_recorded=@stats_recorded where match_id=@match_id";
-            command.Parameters.AddWithValue("@duration", game.Duration);
-            command.Parameters.AddWithValue("@date", game.Date);
-            command.Parameters.AddWithValue("@winner", game.Winner);
-            command.Parameters.AddWithValue("@steam_match_id", game.SteamMatchID);
-            command.Parameters.AddWithValue("@match_id", game.MatchID);
-            command.Parameters.AddWithValue("@stats_recorded", game.StatsRecorded);
+            command.Parameters.AddWithValue("@duration", match.Duration);
+            command.Parameters.AddWithValue("@date", match.Date);
+            command.Parameters.AddWithValue("@winner", match.Winner);
+            command.Parameters.AddWithValue("@steam_match_id", match.SteamMatchID);
+            command.Parameters.AddWithValue("@match_id", match.MatchID);
+            command.Parameters.AddWithValue("@stats_recorded", match.StatsRecorded);
             await ExecuteNoQuery(command);
 
+
+            //TODO: Replace -> UpdateMatchPlayer / InserMatchPlayer() 
             StringBuilder queryBuilder =
                 new StringBuilder(
                     "REPLACE INTO match_player_stats (steam_id, match_id,hero_id, goals, assist, steals, turnovers, steal_turnover_difference,pickups,passes, passes_received, save_rate, points, possession_time, time_as_goalie, win, mmr_adjustment, streak_bonus,team) VALUES ");
-            for (int i = 0; i < game.PlayerMatchStats.Count; i++)
+            for (int i = 0; i < match.PlayerMatchStats.Count; i++)
             {
                 queryBuilder.AppendFormat(
                     "(@steam_id{0},@match_id{0},@hero_id{0},@goals{0},@assist{0},@steals{0},@turnovers{0},@steal_turnover_difference{0},@pickups{0},@passes{0},@passes_received{0},@save_rate{0},@points{0},@possession_time{0},@time_as_goalie{0},@win{0},@mmr_adjustment{0},@streak_bonus{0},@team{0}),",
                     i);
-                if (i == game.PlayerMatchStats.Count - 1)
+                if (i == match.PlayerMatchStats.Count - 1)
                 {
                     queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
                 }
@@ -123,34 +128,86 @@ namespace BanjoBotCore
 
             command = new MySqlCommand(queryBuilder.ToString());
 
-            for (int i = 0; i < game.PlayerMatchStats.Count; i++)
+            for (int i = 0; i < match.PlayerMatchStats.Count; i++)
             {
-                command.Parameters.AddWithValue("@steam_id" + i, game.PlayerMatchStats[i].SteamID);
-                command.Parameters.AddWithValue("@match_id" + i, game.MatchID);
-                command.Parameters.AddWithValue("@hero_id" + i, game.PlayerMatchStats[i].HeroID);
-                command.Parameters.AddWithValue("@goals" + i, game.PlayerMatchStats[i].Goals);
-                command.Parameters.AddWithValue("@assist" + i, game.PlayerMatchStats[i].Assist);
-                command.Parameters.AddWithValue("@steals" + i, game.PlayerMatchStats[i].Steals);
-                command.Parameters.AddWithValue("@turnovers" + i, game.PlayerMatchStats[i].Turnovers);
-                command.Parameters.AddWithValue("@steal_turnover_difference" + i, game.PlayerMatchStats[i].StealTurnDif);
-                command.Parameters.AddWithValue("@pickups" + i, game.PlayerMatchStats[i].Pickups);
-                command.Parameters.AddWithValue("@passes" + i, game.PlayerMatchStats[i].Passes);
-                command.Parameters.AddWithValue("@passes_received" + i, game.PlayerMatchStats[i].PassesReceived);
-                command.Parameters.AddWithValue("@save_rate" + i, game.PlayerMatchStats[i].SaveRate);
-                command.Parameters.AddWithValue("@points" + i, game.PlayerMatchStats[i].Points);
-                command.Parameters.AddWithValue("@possession_time" + i, game.PlayerMatchStats[i].PossessionTime);
-                command.Parameters.AddWithValue("@time_as_goalie" + i, game.PlayerMatchStats[i].TimeAsGoalie);
-                command.Parameters.AddWithValue("@win" + i, game.PlayerMatchStats[i].Win);
-                command.Parameters.AddWithValue("@mmr_adjustment" + i, game.PlayerMatchStats[i].MmrAdjustment);
-                command.Parameters.AddWithValue("@streak_bonus" + i, game.PlayerMatchStats[i].StreakBonus);
-                command.Parameters.AddWithValue("@team" + i, game.PlayerMatchStats[i].Team);
+                command.Parameters.AddWithValue("@steam_id" + i, match.PlayerMatchStats[i].SteamID);
+                command.Parameters.AddWithValue("@match_id" + i, match.MatchID);
+                command.Parameters.AddWithValue("@hero_id" + i, match.PlayerMatchStats[i].HeroID);
+                command.Parameters.AddWithValue("@goals" + i, match.PlayerMatchStats[i].Goals);
+                command.Parameters.AddWithValue("@assist" + i, match.PlayerMatchStats[i].Assist);
+                command.Parameters.AddWithValue("@steals" + i, match.PlayerMatchStats[i].Steals);
+                command.Parameters.AddWithValue("@turnovers" + i, match.PlayerMatchStats[i].Turnovers);
+                command.Parameters.AddWithValue("@steal_turnover_difference" + i, match.PlayerMatchStats[i].StealTurnDif);
+                command.Parameters.AddWithValue("@pickups" + i, match.PlayerMatchStats[i].Pickups);
+                command.Parameters.AddWithValue("@passes" + i, match.PlayerMatchStats[i].Passes);
+                command.Parameters.AddWithValue("@passes_received" + i, match.PlayerMatchStats[i].PassesReceived);
+                command.Parameters.AddWithValue("@save_rate" + i, match.PlayerMatchStats[i].SaveRate);
+                command.Parameters.AddWithValue("@points" + i, match.PlayerMatchStats[i].Points);
+                command.Parameters.AddWithValue("@possession_time" + i, match.PlayerMatchStats[i].PossessionTime);
+                command.Parameters.AddWithValue("@time_as_goalie" + i, match.PlayerMatchStats[i].TimeAsGoalie);
+                command.Parameters.AddWithValue("@win" + i, match.PlayerMatchStats[i].Win);
+                command.Parameters.AddWithValue("@mmr_adjustment" + i, match.PlayerMatchStats[i].MmrAdjustment);
+                command.Parameters.AddWithValue("@streak_bonus" + i, match.PlayerMatchStats[i].StreakBonus);
+                command.Parameters.AddWithValue("@team" + i, match.PlayerMatchStats[i].Team);
 
             }
 
             await ExecuteNoQuery(command);
-
         }
-         
+
+        public async Task UpdateLobby(Lobby lobby)
+        {
+            log.Debug("Update lobby");
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "update lobbies set match_id=@match_id, has_started=@has_started, closed=@closed where lobby_id=@lobby_id";
+            if(lobby.Match == null)
+                command.Parameters.AddWithValue("@match_id",  DBNull.Value);
+            else
+                command.Parameters.AddWithValue("@match_id", lobby.Match.MatchID);
+            command.Parameters.AddWithValue("@has_started", lobby.HasStarted);
+            command.Parameters.AddWithValue("@closed", lobby.IsClosed);
+            await ExecuteNoQuery(command);
+
+            command = new MySqlCommand();
+            var params1 = new string[lobby.WaitingList.Count];
+            for (int i = 0; i < lobby.WaitingList.Count; i++)
+            {
+                params1[i] = string.Format("@steam_id{0}", i);
+                command.Parameters.AddWithValue(params1[i], lobby.WaitingList[i].SteamID);
+            }
+            command.CommandText = String.Format("Delete from lobby_players where steam_id NOT IN({0})", string.Join(",",params1));
+            await ExecuteNoQuery(command);
+
+            //TODO: Replace -> UpdateLobbyPlayers() / InsertLobbyPlayer() 
+            StringBuilder queryBuilder =
+                new StringBuilder(
+                    "Replace into lobby_players (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
+            for (int i = 0; i < lobby.WaitingList.Count; i++)
+            {
+                queryBuilder.AppendFormat(
+                    "(@lobby_id{0}, @steam_id{0} @cancel_call{0}, @red_win_call{0}, @blue_win_call{0}, @draw_call{0}),",
+                    i);
+                if (i == lobby.WaitingList.Count - 1)
+                {
+                    queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
+                }
+            }
+
+            command = new MySqlCommand(queryBuilder.ToString());
+
+            for (int i = 0; i < lobby.WaitingList.Count; i++)
+            {
+                command.Parameters.AddWithValue("@lobby_id" + i, lobby.LobbyID);
+                command.Parameters.AddWithValue("@steam_id" + i, lobby.WaitingList[i].SteamID);
+                command.Parameters.AddWithValue("@cancel_call" + i, lobby.CancelCalls.Contains(lobby.WaitingList[i]));
+                command.Parameters.AddWithValue("@red_win_call" + i, lobby.RedWinCalls.Contains(lobby.WaitingList[i]));
+                command.Parameters.AddWithValue("@blue_win_call" + i, lobby.BlueWinCalls.Contains(lobby.WaitingList[i]));
+                command.Parameters.AddWithValue("@draw_call" + i, lobby.DrawCalls.Contains(lobby.WaitingList[i]));
+            }
+            await ExecuteNoQuery(command);
+        }
+
         public async Task UpdateLeague(League league)
         {
             log.Debug("UpdateLeague");
@@ -257,9 +314,50 @@ namespace BanjoBotCore
             command.Parameters.AddWithValue("@league_id", league.LeagueID);
             await ExecuteNoQuery(command);
         }
-        public async Task<int> InsertMatch(MatchResult match)
+
+        public async Task<int> InsertLobby(Lobby lobby)
         {
-            log.Debug("InsertNewMatch");
+            log.Debug("Insert new lobby");
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText =
+                "Insert into lobbies (league_id, datetime, steam_id, password) Values (@league_id ,@datetime,@steam_id,@password); SELECT LAST_INSERT_ID()";
+            command.Parameters.AddWithValue("@league_id", lobby.League.LeagueID);
+            command.Parameters.AddWithValue("@datetime", DateTime.Now);
+            command.Parameters.AddWithValue("@steam_id", lobby.Host.SteamID);
+            command.Parameters.AddWithValue("@password", lobby.Password);
+            int lobbyID = await ExecuteScalar(command);
+
+            StringBuilder queryBuilder = new StringBuilder("Insert into match_player_stats (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
+            List<Player> players = lobby.WaitingList;
+            for (int i = 0; i < players.Count; i++)
+            {
+                queryBuilder.AppendFormat("(@lobby_id{0},@steam_id{0},@cancel_call{0},@red_win_call{0},@blue_win_call{0},@draw_call{0}),", i);
+                if (i == players.Count - 1)
+                {
+                    queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
+                }
+            }
+
+            command = new MySqlCommand(queryBuilder.ToString());
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                command.Parameters.AddWithValue("@lobby_id" + i, lobby.League.LeagueID);
+                command.Parameters.AddWithValue("@steam_id" + i, players[i].SteamID);
+                command.Parameters.AddWithValue("@cancel_call" + i, lobby.CancelCalls.Contains(players[i]));
+                command.Parameters.AddWithValue("@red_win_call" + i, lobby.RedWinCalls.Contains(players[i]));
+                command.Parameters.AddWithValue("@blue_win_call" + i, lobby.BlueWinCalls.Contains(players[i]));
+                command.Parameters.AddWithValue("@draw_call" + i, lobby.DrawCalls.Contains(players[i]));
+            }
+
+            await ExecuteNoQuery(command);
+
+            return lobbyID;
+        }
+
+        public async Task<int> InsertMatch(Match match)
+        {
+            log.Debug("Insert new match");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
                 "Insert into matches (season, league_id, date) Values (@season,@league_id,@date); SELECT LAST_INSERT_ID()";
@@ -513,10 +611,10 @@ namespace BanjoBotCore
             return result;
         }
 
-        public async Task<List<MatchResult>> GetMatchHistory(int leagueID)
+        public async Task<List<Match>> GetMatchHistory(int leagueID)
         {
             log.Debug("GetMatchHistory");
-            List<MatchResult> matches = new List<MatchResult>();
+            List<Match> matches = new List<Match>();
             MySqlCommand command = new MySqlCommand();
             command.CommandText = string.Format("Select * from matches m " +
                                                 "inner join match_player_stats ps on m.match_id = ps.match_id " +
@@ -632,14 +730,14 @@ namespace BanjoBotCore
                             team = (Teams)reader.GetInt32(i);
                         }
                     }
-                    MatchResult matchResult = null;
+                    Match matchResult = null;
                     foreach (var m in matches) {
                         if (m.MatchID == match_id) {
                             matchResult = m;
                         }
                     }
                     if (matchResult == null) {
-                        matchResult = new MatchResult(match_id, leagueID, steam_match_id, season, winner, date, duration, new List<MatchPlayerStats>(), statsRecorded);
+                        matchResult = new Match(match_id, leagueID, steam_match_id, season, winner, date, duration, new List<MatchPlayerStats>(), statsRecorded);
                         matches.Add(matchResult);
                     }
                     matchResult.PlayerMatchStats.Add(new MatchPlayerStats(matchResult, steam_id, heroID, goals, assist, steals, turnovers, steal_turnover_difference, pickups, passes, passes_received, save_rate, points, possession_time, time_as_goalie, mmr_adjustment, streak_bonus, team, win));
