@@ -37,7 +37,7 @@ namespace BanjoBotCore
                 connection.Open();
                 using (command)
                 {
-                    return command.ExecuteNonQuery();
+                    return await command.ExecuteNonQueryAsync();
                 }
             }
             catch (Exception e)
@@ -59,7 +59,7 @@ namespace BanjoBotCore
                 connection.Open();
                 using (command)
                 {
-                    return Convert.ToInt32(command.ExecuteScalar());
+                    return Convert.ToInt32(await command.ExecuteScalarAsync());
                 }
             }
             catch (Exception e)
@@ -81,7 +81,7 @@ namespace BanjoBotCore
                 connection.Open();
                 using (command)
                 {
-                    return command.ExecuteReader();
+                    return (MySqlDataReader)await command.ExecuteReaderAsync();
                 }
             }
             catch (Exception e)
