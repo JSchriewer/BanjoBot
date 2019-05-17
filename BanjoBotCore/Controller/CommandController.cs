@@ -237,9 +237,10 @@ namespace BanjoBotCore.Controller
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
+            Lobby lobby;
             try
             {
-                await lc.StartGame(player);
+                lobby = await lc.StartGame(player);
             }
             catch (Exception e)
             {
@@ -247,25 +248,28 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
+            if (lobby == null)
+                return;
+
             // Broadcast match details
-            String startmessage = "BBL#" + lc.Lobby.MatchID + " has been started by " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + ".";
-            String blueTeam = "Blue Team (" + lc.Lobby.GetTeamMMR(Teams.Blue) + "): ";
-            foreach (var p in lc.Lobby.BlueList)
+            String startmessage = "BBL#" + lobby.MatchID + " has been started by " + player.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + ".";
+            String blueTeam = "Blue Team (" + lobby.GetTeamMMR(Teams.Blue) + "): ";
+            foreach (var p in lobby.BlueList)
             {
                 blueTeam += p.User.Mention + "(" + p.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MMR + ") ";
             }
-            String redTeam = "Red Team (" + lc.Lobby.GetTeamMMR(Teams.Red) + "): ";
-            foreach (var p in lc.Lobby.RedList)
+            String redTeam = "Red Team (" + lobby.GetTeamMMR(Teams.Red) + "): ";
+            foreach (var p in lobby.RedList)
             {
                 redTeam += p.User.Mention + "(" + p.GetLeagueStats(lc.League.LeagueID, lc.League.Season).MMR + ") ";
             }
-            lc.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
-            await lc.Lobby.StartMessage.PinAsync();
+            lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
+            await lobby.StartMessage.PinAsync();
 
             String password = Lobby.GeneratePassword(6);
-            foreach (var p in lc.Lobby.WaitingList)
+            foreach (var p in lobby.WaitingList)
             {
-                await SendPrivateMessage(p.User as IGuildUser, "BBL#"+ lc.Lobby.MatchID + " has been started. Password: " + password);
+                await SendPrivateMessage(p.User as IGuildUser, "BBL#"+ lobby.MatchID + " has been started. Password: " + password);
             }
         }
 
@@ -979,11 +983,11 @@ namespace BanjoBotCore.Controller
             {
                 case Teams.Red:
                     message += "Red team has won BBL#" + matchResult.MatchID + "!\n";
-                    message += GetGameResultString(matchResult);
+                    message += await GetGameResultString(matchResult);
                     break;
                 case Teams.Blue:
                     message += "Blue team has won BBL#" + matchResult.MatchID + "!\n";
-                    message += GetGameResultString(matchResult);
+                    message += await GetGameResultString(matchResult);
 
                     break;
                 case Teams.Draw:
@@ -1013,21 +1017,28 @@ namespace BanjoBotCore.Controller
             message += "Blue team ("+ blueSign + mmrAdjustment + "): ";
             foreach (var stats in matchResult.PlayerMatchStats)
             {
-                Player player = stats.Player;
-                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
-                else
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                if (stats.Team == Teams.Blue)
+                {
+                    Player player = stats.Player;
+                    if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                    else
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+
+                }
             }
             message += "\n";
             message += "Red team (" + redSign + mmrAdjustment + "): ";
             foreach (var stats in matchResult.PlayerMatchStats)
             {
-                Player player = stats.Player;
-                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
-                else
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                if (stats.Team == Teams.Red)
+                {
+                    Player player = stats.Player;
+                    if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                    else
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                }
             }
 
             return message;
@@ -1094,7 +1105,7 @@ namespace BanjoBotCore.Controller
             
             IMessageChannel channel = e.League.DiscordInformation.Channel as IMessageChannel;
             await SendMessage(channel, "Lobby closed");
-            await UpdateChannelDescription(e.League.DiscordInformation.Channel, e.Lobby.WaitingList.Count, e.GamesInProgress.Count);
+            await UpdateChannelDescription(e.League.DiscordInformation.Channel, 0, e.GamesInProgress.Count);
         }
 
         public async void LobbyCreated(object sender, LeagueEventArgs e)

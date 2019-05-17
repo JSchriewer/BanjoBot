@@ -60,7 +60,7 @@ namespace BanjoBotCore
             if (Lobby.Host != player)
                 throw new Exception(player.User.Mention + " only the host (" + Lobby.Host.Name + ") can start the game.");
 
-            if (Lobby.WaitingList.Count > 1)
+            if (Lobby.WaitingList.Count < Lobby.MAXPLAYERS)
                 throw new Exception(player.User.Mention + " you need 8 players to start the game.");
 
 
@@ -238,16 +238,15 @@ namespace BanjoBotCore
             if (lobby.StartMessage != null) {
                 await lobby.StartMessage.UnpinAsync();
             }
-
-            if (winnerTeam == Teams.Draw) {
-                await DrawMatch(lobby);
-                return;
-            }
-
             if (match == null)
                 match = new MatchResult(lobby);
 
-           
+            if (winnerTeam == Teams.Draw)
+            {
+                await DrawMatch(lobby, match);
+                return;
+            }
+
             await SaveMatchResult(winnerTeam, match);
 
 
@@ -274,13 +273,14 @@ namespace BanjoBotCore
                 
         }
 
-        public async Task DrawMatch(Lobby game)
+        public async Task DrawMatch(Lobby game, MatchResult match)
         {
             foreach (var player in game.WaitingList)
             {
                 player.CurrentGame = null;
             }
             await _database.DrawMatch(game.MatchID);
+            await OnMatchEnded(match);
         }
 
         public async Task AdjustPlayerStats(List<Player> winner, List<Player> looser)

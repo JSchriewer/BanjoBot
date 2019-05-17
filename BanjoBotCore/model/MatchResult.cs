@@ -66,6 +66,7 @@ namespace BanjoBotCore {
             // Manually closed by vote or moderator
             MatchID = game.MatchID;
             LeagueID = game.League.LeagueID;
+            League = game.League;
             SteamMatchID = 0;
             Season = game.League.Season;
             Winner = game.Winner;
