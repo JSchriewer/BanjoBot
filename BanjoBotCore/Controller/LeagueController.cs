@@ -256,6 +256,8 @@ namespace BanjoBotCore
             {
                 await League.Lobby.StartMessage.UnpinAsync();
             }
+            if (match == null)
+                match = new MatchResult(lobby);
 
             if (match == null)
             {

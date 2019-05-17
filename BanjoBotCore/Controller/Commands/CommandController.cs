@@ -172,9 +172,10 @@ namespace BanjoBotCore.Controller
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
+            Lobby lobby;
             try
             {
-                await lc.StartGame(player);
+                lobby = await lc.StartGame(player);
             }
             catch (Exception e)
             {
@@ -902,11 +903,11 @@ namespace BanjoBotCore.Controller
             {
                 case Teams.Red:
                     message += "Red team has won BBL#" + matchResult.MatchID + "!\n";
-                    message += GetGameResultString(matchResult);
+                    message += await GetGameResultString(matchResult);
                     break;
                 case Teams.Blue:
                     message += "Blue team has won BBL#" + matchResult.MatchID + "!\n";
-                    message += GetGameResultString(matchResult);
+                    message += await GetGameResultString(matchResult);
 
                     break;
                 case Teams.Draw:
@@ -936,21 +937,28 @@ namespace BanjoBotCore.Controller
             message += "Blue team ("+ blueSign + mmrAdjustment + "): ";
             foreach (var stats in matchResult.PlayerMatchStats)
             {
-                Player player = stats.Player;
-                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
-                else
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                if (stats.Team == Teams.Blue)
+                {
+                    Player player = stats.Player;
+                    if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                    else
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+
+                }
             }
             message += "\n";
             message += "Red team (" + redSign + mmrAdjustment + "): ";
             foreach (var stats in matchResult.PlayerMatchStats)
             {
-                Player player = stats.Player;
-                if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
-                else
-                    message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                if (stats.Team == Teams.Red)
+                {
+                    Player player = stats.Player;
+                    if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                    else
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
+                }
             }
 
             return message;
