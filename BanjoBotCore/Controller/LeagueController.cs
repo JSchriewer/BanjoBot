@@ -51,7 +51,7 @@ namespace BanjoBotCore
             await OnLobbyClosed();
         }
 
-        public async Task StartGame(Player player)
+        public async Task<Lobby> StartGame(Player player)
         {
             if (!LobbyExists)
                 throw new Exception("No games open. Type !hostgame to create a game.");
@@ -60,7 +60,7 @@ namespace BanjoBotCore
             if (Lobby.Host != player)
                 throw new Exception(player.User.Mention + " only the host (" + Lobby.Host.Name + ") can start the game.");
 
-            if (Lobby.WaitingList.Count < 8)
+            if (Lobby.WaitingList.Count > 1)
                 throw new Exception(player.User.Mention + " you need 8 players to start the game.");
 
 
@@ -69,19 +69,21 @@ namespace BanjoBotCore
             {
                 p.CurrentGame = Lobby;
             }
-
+            Lobby lobby = Lobby;
             try
             {
+                Lobby.StartGame();
                 int match_id = await _database.InsertMatch(League.LeagueID, League.Season, Lobby.BlueList, Lobby.RedList);
                 Lobby.MatchID = match_id;
-                Lobby.StartGame();
                 GamesInProgress.Add(Lobby);
                 Lobby = null;
+                return lobby;
             }
             catch (Exception e)
             {
                 throw e;
             }
+
          
         }
 
@@ -247,8 +249,8 @@ namespace BanjoBotCore
 
            
             await SaveMatchResult(winnerTeam, match);
-           
-         
+
+
         }
 
         //League logic does not apply on public games 
@@ -332,7 +334,7 @@ namespace BanjoBotCore
             }
 
             if (startedGame == null)
-                throw new Exception("Vote before hosting another game");
+                throw new Exception($"Match #{matchID} not found");
 
             await CloseLobbyByCommand(startedGame, team);
 
@@ -449,7 +451,7 @@ namespace BanjoBotCore
             Lobby game = player.CurrentGame;
             if (game.BlueWinCalls.Contains(player))
             {
-                if (team == Teams.Blue || team == Teams.Draw)
+                if (team == Teams.Blue)
                 {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
@@ -462,7 +464,7 @@ namespace BanjoBotCore
             }
             else if (game.RedWinCalls.Contains(player))
             {
-                if (team == Teams.Red || team == Teams.Draw) {
+                if (team == Teams.Red) {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
                 else if (team == Teams.Blue) {
