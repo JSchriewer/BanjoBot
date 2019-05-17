@@ -334,7 +334,25 @@ namespace BanjoBotCore
 
         private Task Log(LogMessage arg)
         {
-            _log.Debug(arg.Message);
+            switch (arg.Severity)
+            {
+                case LogSeverity.Critical:
+                    _log.Fatal(arg.Message);
+                    break;
+                case LogSeverity.Error:
+                    _log.Error(arg.Message);
+                    break;
+                case LogSeverity.Warning:
+                    _log.Warn(arg.Message);
+                    break;
+                case LogSeverity.Debug:
+                    _log.Debug(arg.Message);
+                    break;
+                case LogSeverity.Info:
+                    _log.Info(arg.Message);
+                    break;
+            }
+
             return Task.CompletedTask;
         }
 

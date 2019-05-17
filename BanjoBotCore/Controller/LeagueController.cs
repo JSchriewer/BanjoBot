@@ -365,7 +365,7 @@ namespace BanjoBotCore
             }
 
             if (startedGame == null)
-                throw new Exception("Vote before hosting another game");
+                throw new Exception($"Match #{matchID} not found");
 
             await CloseLobby(startedGame, team);
 
@@ -483,7 +483,7 @@ namespace BanjoBotCore
             Lobby lobby = player.CurrentGame;
             if (League.Lobby.BlueWinCalls.Contains(player))
             {
-                if (team == Teams.Blue || team == Teams.Draw)
+                if (team == Teams.Blue)
                 {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
@@ -496,7 +496,7 @@ namespace BanjoBotCore
             }
             else if (League.Lobby.RedWinCalls.Contains(player))
             {
-                if (team == Teams.Red || team == Teams.Draw) {
+                if (team == Teams.Red) {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
                 else if (team == Teams.Blue) {
