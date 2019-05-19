@@ -220,7 +220,7 @@ namespace BanjoBotCore.Controller
             await VoteMatchResult(channel, socketGuildChannel, user,Teams.Draw);
         }
 
-        public async Task VoteWinner(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        public async Task VoteWin(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
@@ -230,6 +230,19 @@ namespace BanjoBotCore.Controller
                 return;
             }
             Teams winner = player.CurrentGame.BlueList.Contains(player) ? Teams.Blue : Teams.Red;
+            await VoteMatchResult(channel, socketGuildChannel, user, winner);
+        }
+
+        public async Task VoteLost(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        {
+            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            Player player = lc.League.GetPlayerByDiscordID(user.Id);
+            if (!player.IsIngame)
+            {
+                await SendMessage(channel, "You are not ingame");
+                return;
+            }
+            Teams winner = player.CurrentGame.BlueList.Contains(player) ? Teams.Red : Teams.Blue;
             await VoteMatchResult(channel, socketGuildChannel, user, winner);
         }
 
