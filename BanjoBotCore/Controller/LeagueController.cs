@@ -455,10 +455,9 @@ namespace BanjoBotCore
                 {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
-                else if (team == Teams.Red)
+                else
                 {
                     game.BlueWinCalls.Remove(player);
-                    game.RedWinCalls.Add(player);
                   
                 }
             }
@@ -467,30 +466,34 @@ namespace BanjoBotCore
                 if (team == Teams.Red) {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
-                else if (team == Teams.Blue) {
+                else
+                { 
                     game.RedWinCalls.Remove(player);
-                    game.BlueWinCalls.Add(player);
-                   
                 }
             }
             else if (game.DrawCalls.Contains(player))
             {
-                throw new Exception(player.User.Mention + " you have already voted for this team.");
-            }
-            else
-            {
-                switch (team)
+                if (team == Teams.Draw)
                 {
-                    case Teams.Red:
-                        game.RedWinCalls.Add(player);
-                        break;
-                    case Teams.Blue:
-                        game.BlueWinCalls.Add(player);
-                        break;
-                    case Teams.Draw:
-                        game.DrawCalls.Add(player);
-                        break;
+                    throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
+                else
+                {
+                    game.DrawCalls.Remove(player);
+                }
+            }
+      
+            switch (team)
+            {
+                case Teams.Red:
+                    game.RedWinCalls.Add(player);
+                    break;
+                case Teams.Blue:
+                    game.BlueWinCalls.Add(player);
+                    break;
+                case Teams.Draw:
+                    game.DrawCalls.Add(player);
+                    break;
             }
 
             Teams winner = Teams.None;

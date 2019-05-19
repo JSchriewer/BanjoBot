@@ -181,37 +181,19 @@ namespace BanjoBotCore.Controller
             }
 
             Lobby lobby = player.CurrentGame;
-            if (lobby.BlueWinCalls.Contains(player))
+            switch (team)
             {
-                if (team == Teams.Red)
-                {
-                    await SendTempMessage(channel, player.User.Mention + " has changed his Mind");
+                case Teams.Red:
                     await SendMessage(channel, "Vote recorded for Red team in game #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.RedWinCalls.Count() + "/5)");
-                }
-            }
-            else if (lobby.RedWinCalls.Contains(player))
-            {
-                if (team == Teams.Blue)
-                {
-                    await SendTempMessage(channel, player.User.Mention + " has changed his Mind");
+                    break;
+                case Teams.Blue:
                     await SendMessage(channel, "Vote recorded for Blue team in game #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.BlueWinCalls.Count() + "/5)");
-                }
+                    break;
+                case Teams.Draw:
+                    await SendMessage(channel, "Vote recorded for draw #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.DrawCalls.Count() + "/5)");
+                    break;
             }
-            else
-            {
-                switch (team)
-                {
-                    case Teams.Red:
-                        await SendMessage(channel, "Vote recorded for Red team in game #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.RedWinCalls.Count() + "/5)");
-                        break;
-                    case Teams.Blue:
-                        await SendMessage(channel, "Vote recorded for Blue team in game #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.BlueWinCalls.Count() + "/5)");
-                        break;
-                    case Teams.Draw:
-                        await SendMessage(channel, "Vote recorded for draw #" + lobby.MatchID + " by " + player.Name + ". (" + lobby.DrawCalls.Count() + "/5)");
-                        break;
-                }
-            }
+            
         }
         public async Task VoteDraw(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
