@@ -181,6 +181,11 @@ namespace BanjoBotCore.Controller
             }
 
             Lobby lobby = player.CurrentGame;
+            if(lobby == null)
+            {
+                return;
+            }
+
             switch (team)
             {
                 case Teams.Red:
