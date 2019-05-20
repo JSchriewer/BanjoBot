@@ -14,9 +14,14 @@ namespace BanjoBotCore
 
     public class Lobby
     {
+
+#if RELEASE
         public const int MAXPLAYERS = 8;
         public const int VOTETHRESHOLD = 5;
-
+#else
+        public const int MAXPLAYERS = 1;
+        public const int VOTETHRESHOLD = 1;
+#endif
         public League League { get; set; }
         public Player Host { get; set; }
         public List<Player> WaitingList { get; set; }
