@@ -12,6 +12,7 @@ using System.IO;
 using Microsoft.Extensions.Configuration;
 using BanjoBotCore.Controller;
 using System.Threading;
+using BanjoBotCore.Model;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -19,6 +20,7 @@ namespace BanjoBotCore
 {
     public class Program
     {
+        private const int MillisecondsTimeout = 30000;
         private DiscordSocketClient _client;
         private IConfiguration _config;
         private static ILog _log;
@@ -167,60 +169,42 @@ namespace BanjoBotCore
             _log.Info($"Loading match history of {league.Name}({league.LeagueID})");
             List<Match> matches = await _databaseController.GetMatchHistory(league.LeagueID);
             league.Matches = matches;
-            foreach (var matchResult in matches)
+            foreach (var match in matches)
             {
-                matchResult.League = league;
-                Lobby lobby = null;
-                Boolean lobbyOpen = false;
-
-                //Restore games
+                match.League = league;
                 LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
-                if (matchResult.Winner == Teams.None)
+             
+                foreach (var stats in match.PlayerMatchStats)
                 {
-                    lobby = new Lobby(lc.League);
-                    lobby.MatchID = matchResult.MatchID;
-                    lobby.League = lc.League;
-                  
-                    if (matchResult.PlayerMatchStats[0].Team == Teams.None)
-                    {
-                        lc.Lobby = lobby;
-                    }
-                    else
-                    {
-                        // Restore running games
-                        lobby.HasStarted = true;
-                        lc.LobbyInProgress.Add(lobby);
-                    }
-                }
-
-                foreach (var stats in matchResult.PlayerMatchStats)
-                {
-                    if (lobby != null)
-                    {
-                        Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
-                        stats.Player = player;
-
-                        // Restore Lobby Details
-                        lobby.Host = player;
-                        lobby.WaitingList.Add(player);
-
-                        // Assign teams if the lobby has started
-                        if (lobby.HasStarted) {
-                            player.CurrentGame = lobby;
-                            if (stats.Team == Teams.Blue)
-                            {
-                                lobby.BlueList.Add(player);
-                            }
-                            else
-                            {
-                                lobby.RedList.Add(player);
-                            }
-                        }
-                    }
+                    Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
+                    stats.Match = match;
+                    stats.Player = player;
 
                     Player p = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
                     if (p != null)
-                        p.Matches.Add(matchResult);
+                        p.Matches.Add(match);
+                }
+            }
+        }
+
+        private async Task LoadLobbies(League league)
+        {
+            _log.Info($"Loading open lobbies of {league.Name}({league.LeagueID})");
+            List<Lobby> lobbies = await _databaseController.GetLobbies(league.LeagueID, league.RegisteredPlayers);
+            foreach (var lobby in lobbies)
+            {
+                if (lobby.HasStarted)
+                {
+                    league.LobbyInProgress.Add(lobby);
+                    lobby.Match = league.Matches.Find(m => m.MatchID == lobby.MatchID);
+                }
+                else
+                {
+                    league.Lobby = lobby;
+                }
+                foreach (var player in lobby.WaitingList)
+                {
+                    player.CurrentGame = lobby;
                 }
             }
         }
@@ -238,6 +222,7 @@ namespace BanjoBotCore
                     {
                         await LoadPlayerBase(lc.League);
                         await LoadMatchHistory(lc.League);
+                        await LoadLobbies(lc.League);
                     }
                 }
                 else
@@ -311,13 +296,12 @@ namespace BanjoBotCore
         private async Task ServerDisconnected(SocketGuild socketGuild)
         {
             _connectedServers.Remove(socketGuild);
-
+            
             //Workaround for https://github.com/RogueException/Discord.Net/issues/960
             Task.Run(async () =>
             {
-                Thread.Sleep(30000);
-
-                if (!socketGuild.IsConnected) { 
+                Thread.Sleep(MillisecondsTimeout);
+                if (!socketGuild.IsConnected && !_connectedServers.Contains(socketGuild)) { 
                     _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
                     Environment.Exit(1);
                 }

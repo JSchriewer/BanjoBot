@@ -22,17 +22,39 @@ namespace BanjoBotCore.Model
         public List<Player> BlueWinCalls { get; set; }
         public List<Player> DrawCalls { get; set; }
         public bool HasStarted { get; set; }
-        public bool IsClosed { get; set; }
+        public bool IsClosed { get; set; } = false;
         public Match Match { get; set; }
         public String Password { get;}
         public IUserMessage StartMessage { get; set; }
-        
+        public int LeagueID { get; set; }
+        public ulong HostID { get; set; }
+        public int MatchID { get; set; }
+        public ulong StartMessageID { get; set; }
+
+
 
         public Lobby(Player host, League league) : this(league)
         {
             Host = host;
             WaitingList.Add(host);
         
+        }
+
+        //Database Constructor
+        public Lobby(int lobbyID, int leagueID, ulong hostID, int matchID, Boolean hasStarted, String password, ulong startMessageID)
+        {
+            LobbyID = lobbyID;
+            LeagueID = leagueID;
+            HostID = hostID;
+            MatchID = matchID;
+            HasStarted = hasStarted;
+            Password = password;
+            StartMessageID = startMessageID;
+            WaitingList = new List<Player>();
+            CancelCalls = new List<Player>();
+            BlueWinCalls = new List<Player>();
+            RedWinCalls = new List<Player>();
+            DrawCalls = new List<Player>();
         }
 
         public Lobby(League league)
@@ -120,6 +142,11 @@ namespace BanjoBotCore.Model
             var random = new Random();
             return new String(Enumerable.Repeat(chars, length)
               .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        internal int GetCancelThreshold()
+        {
+            return (int)Math.Ceiling((double)League.Lobby.WaitingList.Count() / 2);
         }
     }
 }

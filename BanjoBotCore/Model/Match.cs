@@ -20,7 +20,7 @@ namespace BanjoBotCore.Model
         public DateTime Date { get; set; }
         public int Duration { get; set; }
         public bool StatsRecorded { get; set; }
-        public List<MatchPlayerStats> PlayerMatchStats { get; set; }  
+        public List<MatchPlayerStats> PlayerMatchStats { get; set; }
 
         // Database Constructor
         public Match(int matchID, int leagueID, ulong steamMatchID, int season, Teams winner, DateTime date, int duration, List<MatchPlayerStats> stats, bool statsRecorded)
@@ -36,7 +36,6 @@ namespace BanjoBotCore.Model
             StatsRecorded = statsRecorded;
         }
 
-        // Vote Constructor
         public Match(Lobby lobby) {
             //TODO: LeagueID, Season needed?
             League league = lobby.League;
@@ -96,17 +95,16 @@ namespace BanjoBotCore.Model
             }
         }
 
-            public async Task<MatchPlayerStats> GetPlayerStats(Player player)
+        public async Task<MatchPlayerStats> GetPlayerStats(Player player)
+        {
+            foreach(MatchPlayerStats stats in PlayerMatchStats)
             {
-                foreach(MatchPlayerStats stats in PlayerMatchStats)
-                {
-                    if (stats.Player == player)
-                        return stats;
-                }
-
-                return null;
+                if (stats.Player == player)
+                    return stats;
             }
 
+            return null;
+        }
         /// <summary>
         /// Returns the average MMR of all players on the team.
         /// </summary>

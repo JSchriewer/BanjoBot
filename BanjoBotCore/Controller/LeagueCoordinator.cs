@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BanjoBotCore.Controller;
+using BanjoBotCore.Model;
 using Discord.WebSocket;
 using log4net;
 using Microsoft.Extensions.DependencyInjection;

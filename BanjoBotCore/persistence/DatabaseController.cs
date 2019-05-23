@@ -6,7 +6,6 @@ using log4net;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using BanjoBotCore.persistence;
 using BanjoBotCore.Model;
 
 namespace BanjoBotCore
@@ -592,7 +591,6 @@ namespace BanjoBotCore
             {
                 while (reader.Read()) {
                     ulong discordId = 0;
-                    int leagueId = 0;
                     ulong steamId = 0;
 
                     for (int i = 0; i < reader.FieldCount; i++) {
@@ -609,6 +607,124 @@ namespace BanjoBotCore
                 }
             }
             return result;
+        }
+
+
+        public async Task<List<Lobby>> GetLobbies(int leagueID, List<Player> players)
+        {
+            log.Debug("GetLobbies");
+            List<Lobby> lobbies = new List<Lobby>();
+            MySqlCommand command = new MySqlCommand();
+            command.CommandText = string.Format("Select * from lobbies l " +
+                                                "inner join lobby_players lp on l.lobby_id = lp.lobby_id " +
+                                                "where l.league_id = @league_id " +
+                                                "AND closed = false");
+            command.Parameters.AddWithValue("@league_id", leagueID);
+
+            using (MySqlDataReader reader = await ExecuteReader(command))
+            {
+                while (reader.Read())
+                {
+                    int lobby_id = 0;
+                    int league_id = 0;
+                    int match_id = 0;
+                    String password = "";
+                    Boolean has_started = false;
+                    DateTime date = DateTime.MaxValue;
+                    ulong steam_id_host = ulong.MinValue;
+                    ulong discord_message = ulong.MinValue;
+                    ulong steam_id = ulong.MinValue;
+                    Boolean cancel_call = false;
+                    Boolean red_win_call = false;
+                    Boolean blue_win_call = false;
+                    Boolean draw_call = false;
+
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        if (reader.GetName(i).Equals("lobby_id"))
+                        {
+                            lobby_id = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("league_id"))
+                        {
+                            league_id = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("date"))
+                        {
+                            date = reader.GetDateTime(i);
+                        }
+                        else if (reader.GetName(i).Equals("steam_id_host"))
+                        {
+                            steam_id_host = reader.GetUInt64(i);
+                        }
+                        else if (reader.GetName(i).Equals("match_id"))
+                        {
+                            match_id = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("password"))
+                        {
+                            password = reader.GetString(i);
+                        }
+                        else if (reader.GetName(i).Equals("discord_message"))
+                        {
+                            discord_message = reader.GetUInt64(i);
+                        }
+                        else if (reader.GetName(i).Equals("has_started"))
+                        {
+                            has_started = reader.GetBoolean(i);
+                        }
+                        else if (reader.GetName(i).Equals("steam_id"))
+                        {
+                            steam_id = reader.GetUInt64(i);
+                        }
+                        else if (reader.GetName(i).Equals("cancel_call"))
+                        {
+                            cancel_call = reader.GetBoolean(i);
+                        }
+                        else if (reader.GetName(i).Equals("red_win_call"))
+                        {
+                            red_win_call = reader.GetBoolean(i);
+                        }
+                        else if (reader.GetName(i).Equals("blue_win_call"))
+                        {
+                            blue_win_call = reader.GetBoolean(i);
+                        }
+                        else if (reader.GetName(i).Equals("draw_call"))
+                        {
+                            draw_call = reader.GetBoolean(i);
+                        }
+                    }
+                    Lobby lobby = null;
+                    foreach (var l in lobbies)
+                    {
+                        if (l.LobbyID == lobby_id)
+                        {
+                            lobby = l;
+                        }
+                    }
+                    if (lobby == null)
+                    {
+                        lobby = new Lobby(lobby_id, league_id, steam_id_host,match_id, has_started,password, discord_message);
+                        lobbies.Add(lobby);
+                    }
+                    Player player = players.Find(p => p.SteamID == steam_id);
+                    if(player != null)
+                    {
+                        lobby.WaitingList.Add(player);
+                        if(blue_win_call)
+                            lobby.BlueWinCalls.Add(player);
+                        if(red_win_call)
+                            lobby.RedWinCalls.Add(player);
+                        if (draw_call)
+                            lobby.DrawCalls.Add(player);
+                        if (cancel_call)
+                            lobby.CancelCalls.Add(player);
+                    }
+                        
+
+                }
+            }
+            return lobbies;
         }
 
         public async Task<List<Match>> GetMatchHistory(int leagueID)
