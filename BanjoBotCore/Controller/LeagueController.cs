@@ -94,7 +94,7 @@ namespace BanjoBotCore
             {
                 p.CurrentGame = League.Lobby;
             }
-
+            Lobby lobby = League.Lobby;
             try
             {
                 Match newMatch = await CreateMatch(League.Lobby);
@@ -108,6 +108,7 @@ namespace BanjoBotCore
             {
                 throw e;
             }
+
          
         }
 
@@ -251,13 +252,6 @@ namespace BanjoBotCore
         {
             League.LobbyInProgress.Remove(lobby);
             League.Lobby.IsClosed = true;
-
-            if (League.Lobby.StartMessage != null)
-            {
-                await League.Lobby.StartMessage.UnpinAsync();
-            }
-            if (match == null)
-                match = new MatchResult(lobby);
 
             if (match == null)
             {
@@ -489,10 +483,9 @@ namespace BanjoBotCore
                 {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
-                else if (team == Teams.Red)
+                else
                 {
                     League.Lobby.BlueWinCalls.Remove(player);
-                    League.Lobby.RedWinCalls.Add(player);
                   
                 }
             }
@@ -501,30 +494,34 @@ namespace BanjoBotCore
                 if (team == Teams.Red) {
                     throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
-                else if (team == Teams.Blue) {
+                else
+                {
                     League.Lobby.RedWinCalls.Remove(player);
-                    League.Lobby.BlueWinCalls.Add(player);
-                   
                 }
             }
             else if (League.Lobby.DrawCalls.Contains(player))
             {
-                throw new Exception(player.User.Mention + " you have already voted for this team.");
-            }
-            else
-            {
-                switch (team)
+                if (team == Teams.Draw)
                 {
-                    case Teams.Red:
-                        League.Lobby.RedWinCalls.Add(player);
-                        break;
-                    case Teams.Blue:
-                        League.Lobby.BlueWinCalls.Add(player);
-                        break;
-                    case Teams.Draw:
-                        League.Lobby.DrawCalls.Add(player);
-                        break;
+                    throw new Exception(player.User.Mention + " you have already voted for this team.");
                 }
+                else
+                {
+                    League.Lobby.DrawCalls.Remove(player);
+                }
+            }
+      
+            switch (team)
+            {
+                case Teams.Red:
+                    League.Lobby.RedWinCalls.Add(player);
+                    break;
+                case Teams.Blue:
+                    League.Lobby.BlueWinCalls.Add(player);
+                    break;
+                case Teams.Draw:
+                    League.Lobby.DrawCalls.Add(player);
+                    break;
             }
 
             Teams winner = Teams.None;

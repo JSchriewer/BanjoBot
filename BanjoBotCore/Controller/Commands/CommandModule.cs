@@ -164,19 +164,19 @@ namespace BanjoBotCore {
         [Command("won"), Summary("Cast vote for your team as the winner of your current game (post game only)."), Alias(new string[] { "win", "ez" }), RequireLeaguePermission]
         public async Task Win() {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.VoteWinner(Context.Channel, socketGuildChannel, Context.User);
+            await _commandController.VoteWin(Context.Channel, socketGuildChannel, Context.User);
         }
 
         [Command("lost"), Summary("Cast vote for your teams as the winner of your current game (post game only)."), Alias(new string[] { "loss" }), RequireLeaguePermission]
         public async Task Lost() {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.VoteWinner(Context.Channel, socketGuildChannel, Context.User);
+            await _commandController.VoteLost(Context.Channel, socketGuildChannel, Context.User);
         }
 
         [Command("draw"), Summary("Cast vote for a draw of your current game (post game only)."), RequireLeaguePermission]
         public async Task VoteDraw() {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.VoteMatchResult(Context.Channel, socketGuildChannel, Context.User, Teams.Draw);
+            await _commandController.VoteDraw(Context.Channel, socketGuildChannel, Context.User);
         }
 
         [Command("topmmr"), Summary("Shows the top 10 players"), Alias(new string[] { "top", "t" }), RequireLeagueChannel]

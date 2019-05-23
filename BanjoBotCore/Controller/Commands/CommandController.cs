@@ -155,7 +155,7 @@ namespace BanjoBotCore.Controller
             await VoteMatchResult(channel, socketGuildChannel, user,Teams.Draw);
         }
 
-        public async Task VoteWinner(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        public async Task VoteWin(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
@@ -164,7 +164,20 @@ namespace BanjoBotCore.Controller
                 await SendMessage(channel, "You are not ingame");
                 return;
             }
-            Teams winner = player.CurrentGame.BlueList.Contains(player) ? Teams.Blue : Teams.Red;
+            Teams winner = player.CurrentGame.Match.GetTeam(Teams.Blue).Contains(player) ? Teams.Blue : Teams.Red;
+            await VoteMatchResult(channel, socketGuildChannel, user, winner);
+        }
+
+        public async Task VoteLost(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        {
+            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            Player player = lc.League.GetPlayerByDiscordID(user.Id);
+            if (!player.IsIngame)
+            {
+                await SendMessage(channel, "You are not ingame");
+                return;
+            }
+            Teams winner = player.CurrentGame.Match.GetTeam(Teams.Blue).Contains(player) ? Teams.Red : Teams.Blue;
             await VoteMatchResult(channel, socketGuildChannel, user, winner);
         }
 
@@ -172,10 +185,9 @@ namespace BanjoBotCore.Controller
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
-            Lobby lobby;
             try
             {
-                lobby = await lc.StartGame(player);
+                await lc.StartGame(player);
             }
             catch (Exception e)
             {
@@ -1026,7 +1038,12 @@ namespace BanjoBotCore.Controller
         {
             if (e == null)
                 return;
-            
+
+            if (e.Lobby.StartMessage != null)
+            {
+                await e.League.Lobby.StartMessage.UnpinAsync();
+            }
+
             SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
             await SendMessage(channel, "Lobby closed");
             await UpdateChannelDescription(channel, 0, e.League.LobbyInProgress.Count);
