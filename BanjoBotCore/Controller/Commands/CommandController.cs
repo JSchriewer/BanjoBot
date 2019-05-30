@@ -33,7 +33,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.HostLobby(player);
             }
-            catch(Exception e)
+            catch(LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -48,7 +48,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.JoinLobby(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -63,7 +63,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.LeaveLobby(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -90,7 +90,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.KickPlayer(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -109,7 +109,7 @@ namespace BanjoBotCore.Controller
             {
 
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -126,7 +126,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.VoteCancel(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -142,7 +142,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.VoteWinner(player, team);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -189,7 +189,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.StartGame(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -210,7 +210,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.CloseLobbyByModerator(matchID, team);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -466,7 +466,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.ReCreateLobby(matchID, playerToRemove);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -535,7 +535,7 @@ namespace BanjoBotCore.Controller
                 else
                     await lc.RegisterPlayer(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -566,7 +566,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.AcceptRegistration(player);
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -631,7 +631,7 @@ namespace BanjoBotCore.Controller
             {
                 await lc.StartNewSeason();
             }
-            catch (Exception e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
                 return;
@@ -1041,7 +1041,7 @@ namespace BanjoBotCore.Controller
 
             if (e.Lobby.StartMessage != null)
             {
-                await e.League.Lobby.StartMessage.UnpinAsync();
+                await e.Lobby.StartMessage.UnpinAsync();
             }
 
             SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
@@ -1112,7 +1112,7 @@ namespace BanjoBotCore.Controller
         public async void LobbyStarted(object sender, LobbyEventArgs e)
         {
             SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
-            String startmessage = "BBL#" + e.League.Lobby.MatchID + " has been started.";
+            String startmessage = "BBL#" + e.Lobby.Match.MatchID + " has been started.";
             String blueTeam = "Blue Team (" + e.Lobby.Match.GetTeamMMR(Teams.Blue) + "): ";
             foreach (var p in e.Lobby.Match.GetTeam(Teams.Blue))
             {
@@ -1126,7 +1126,7 @@ namespace BanjoBotCore.Controller
 
             e.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await e.Lobby.StartMessage.PinAsync();
-            await UpdateChannelDescription(channel, e.League.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
+            await UpdateChannelDescription(channel, e.League.Lobby != null ? e.League.Lobby.WaitingList.Count : 0, e.League.LobbyInProgress.Count);
         }
        
         public async void PlayerVoted(object sender, LobbyVoteEventArgs e)

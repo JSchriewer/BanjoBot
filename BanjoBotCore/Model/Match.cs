@@ -38,7 +38,7 @@ namespace BanjoBotCore.Model
 
         public Match(Lobby lobby) {
             //TODO: LeagueID, Season needed?
-            League league = lobby.League;
+            League = lobby.League;
             LeagueID = lobby.League.LeagueID;
             SteamMatchID = 0;
             Season = lobby.League.Season;
@@ -90,8 +90,6 @@ namespace BanjoBotCore.Model
                     stats.StreakBonus = 0;
                     stats.Win = false;
                 }
-
-                PlayerMatchStats.Add(stats);
             }
         }
 
@@ -118,7 +116,14 @@ namespace BanjoBotCore.Model
 
         public List<Player> GetTeam(Teams team)
         {
-            return (List<Player>)from stats in PlayerMatchStats where stats.Team == Teams.Blue select stats.Player;
+            List<Player> players = PlayerMatchStats.Where(s => s.Team == team).Select(s => s.Player).ToList<Player>();
+            return players;
+        }
+
+        public List<Player> GetPlayers()
+        {
+            List<Player> players = PlayerMatchStats.Select(s => s.Player).ToList<Player>();
+            return players;
         }
     }
 }

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using BanjoBotCore.Controller;
 using System.Threading;
 using BanjoBotCore.Model;
+using Discord.Rest;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -193,15 +194,28 @@ namespace BanjoBotCore
             List<Lobby> lobbies = await _databaseController.GetLobbies(league.LeagueID, league.RegisteredPlayers);
             foreach (var lobby in lobbies)
             {
+                lobby.League = league;
+                RestTextChannel rtc = await _client.Rest.GetChannelAsync(league.DiscordInformation.Channel.Id) as RestTextChannel;
+                if(lobby.StartMessageID != 0)
+                    lobby.StartMessage = await rtc.GetMessageAsync(lobby.StartMessageID) as RestUserMessage;
+                
+                lobby.Host = league.RegisteredPlayers.Find(p => p.SteamID == lobby.HostID);
                 if (lobby.HasStarted)
                 {
-                    league.LobbyInProgress.Add(lobby);
                     lobby.Match = league.Matches.Find(m => m.MatchID == lobby.MatchID);
+                    if (lobby.Match == null)
+                    {
+                        _log.Warn($"Loading Lobby: Couldn't find match #{lobby.MatchID}");
+                        continue;
+                    }
+                       
+                    league.LobbyInProgress.Add(lobby);
                 }
                 else
                 {
                     league.Lobby = lobby;
                 }
+
                 foreach (var player in lobby.WaitingList)
                 {
                     player.CurrentGame = lobby;
@@ -338,18 +352,23 @@ namespace BanjoBotCore
             {
                 case LogSeverity.Critical:
                     _log.Fatal(arg.Message);
+                    if(arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
                 case LogSeverity.Error:
                     _log.Error(arg.Message);
+                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
                 case LogSeverity.Warning:
                     _log.Warn(arg.Message);
+                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
                 case LogSeverity.Debug:
                     _log.Debug(arg.Message);
+                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
                 case LogSeverity.Info:
                     _log.Info(arg.Message);
+                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
             }
 

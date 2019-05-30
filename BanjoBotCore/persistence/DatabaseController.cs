@@ -159,52 +159,63 @@ namespace BanjoBotCore
             log.Debug("Update lobby");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
-                "update lobbies set match_id=@match_id, has_started=@has_started, closed=@closed where lobby_id=@lobby_id";
-            if(lobby.Match == null)
+                "update lobbies set match_id=@match_id,discord_message=@discord_message, has_started=@has_started, closed=@closed where lobby_id=@lobby_id";
+
+            if (lobby.Match == null)
                 command.Parameters.AddWithValue("@match_id",  DBNull.Value);
             else
                 command.Parameters.AddWithValue("@match_id", lobby.Match.MatchID);
+
+            command.Parameters.AddWithValue("@lobby_id", lobby.LobbyID);
+            if(lobby.StartMessage != null)
+                command.Parameters.AddWithValue("@discord_message", lobby.StartMessage.Id);
+            else
+                command.Parameters.AddWithValue("@discord_message", DBNull.Value);
             command.Parameters.AddWithValue("@has_started", lobby.HasStarted);
             command.Parameters.AddWithValue("@closed", lobby.IsClosed);
             await ExecuteNoQuery(command);
 
             command = new MySqlCommand();
-            var params1 = new string[lobby.WaitingList.Count];
-            for (int i = 0; i < lobby.WaitingList.Count; i++)
-            {
-                params1[i] = string.Format("@steam_id{0}", i);
-                command.Parameters.AddWithValue(params1[i], lobby.WaitingList[i].SteamID);
-            }
-            command.CommandText = String.Format("Delete from lobby_players where steam_id NOT IN({0})", string.Join(",",params1));
-            await ExecuteNoQuery(command);
-
-            //TODO: Replace -> UpdateLobbyPlayers() / InsertLobbyPlayer() 
-            StringBuilder queryBuilder =
-                new StringBuilder(
-                    "Replace into lobby_players (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
-            for (int i = 0; i < lobby.WaitingList.Count; i++)
-            {
-                queryBuilder.AppendFormat(
-                    "(@lobby_id{0}, @steam_id{0} @cancel_call{0}, @red_win_call{0}, @blue_win_call{0}, @draw_call{0}),",
-                    i);
-                if (i == lobby.WaitingList.Count - 1)
+            if(lobby.WaitingList.Count > 0) {
+                var params1 = new string[lobby.WaitingList.Count];
+                for (int i = 0; i < lobby.WaitingList.Count; i++)
                 {
-                    queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
+                    params1[i] = string.Format("@steam_id{0}", i);
+                    command.Parameters.AddWithValue(params1[i], lobby.WaitingList[i].SteamID);
                 }
-            }
+                command.CommandText = String.Format("Delete from lobby_players where steam_id NOT IN({0})", string.Join(",",params1));
+                await ExecuteNoQuery(command);
+            
 
-            command = new MySqlCommand(queryBuilder.ToString());
+                //TODO: Replace -> UpdateLobbyPlayers() / InsertLobbyPlayer() 
+                StringBuilder queryBuilder =
+                    new StringBuilder(
+                        "Replace into lobby_players (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
+                for (int i = 0; i < lobby.WaitingList.Count; i++)
+                {
+                    queryBuilder.AppendFormat(
+                        "(@lobby_id{0}, @steam_id{0}, @cancel_call{0}, @red_win_call{0}, @blue_win_call{0}, @draw_call{0}),",
+                        i);
+                    if (i == lobby.WaitingList.Count - 1)
+                    {
+                        queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
+                    }
+                }
 
-            for (int i = 0; i < lobby.WaitingList.Count; i++)
-            {
-                command.Parameters.AddWithValue("@lobby_id" + i, lobby.LobbyID);
-                command.Parameters.AddWithValue("@steam_id" + i, lobby.WaitingList[i].SteamID);
-                command.Parameters.AddWithValue("@cancel_call" + i, lobby.CancelCalls.Contains(lobby.WaitingList[i]));
-                command.Parameters.AddWithValue("@red_win_call" + i, lobby.RedWinCalls.Contains(lobby.WaitingList[i]));
-                command.Parameters.AddWithValue("@blue_win_call" + i, lobby.BlueWinCalls.Contains(lobby.WaitingList[i]));
-                command.Parameters.AddWithValue("@draw_call" + i, lobby.DrawCalls.Contains(lobby.WaitingList[i]));
+
+                command = new MySqlCommand(queryBuilder.ToString());
+
+                for (int i = 0; i < lobby.WaitingList.Count; i++)
+                {
+                    command.Parameters.AddWithValue("@lobby_id" + i, lobby.LobbyID);
+                    command.Parameters.AddWithValue("@steam_id" + i, lobby.WaitingList[i].SteamID);
+                    command.Parameters.AddWithValue("@cancel_call" + i, lobby.CancelCalls.Contains(lobby.WaitingList[i]));
+                    command.Parameters.AddWithValue("@red_win_call" + i, lobby.RedWinCalls.Contains(lobby.WaitingList[i]));
+                    command.Parameters.AddWithValue("@blue_win_call" + i, lobby.BlueWinCalls.Contains(lobby.WaitingList[i]));
+                    command.Parameters.AddWithValue("@draw_call" + i, lobby.DrawCalls.Contains(lobby.WaitingList[i]));
+                }
+                await ExecuteNoQuery(command);
             }
-            await ExecuteNoQuery(command);
         }
 
         public async Task UpdateLeague(League league)
@@ -319,14 +330,14 @@ namespace BanjoBotCore
             log.Debug("Insert new lobby");
             MySqlCommand command = new MySqlCommand();
             command.CommandText =
-                "Insert into lobbies (league_id, datetime, steam_id, password) Values (@league_id ,@datetime,@steam_id,@password); SELECT LAST_INSERT_ID()";
+                "Insert into lobbies (league_id, datetime, steam_id_host, password) Values (@league_id ,@datetime,@steam_id_host,@password); SELECT LAST_INSERT_ID()";
             command.Parameters.AddWithValue("@league_id", lobby.League.LeagueID);
             command.Parameters.AddWithValue("@datetime", DateTime.Now);
-            command.Parameters.AddWithValue("@steam_id", lobby.Host.SteamID);
+            command.Parameters.AddWithValue("@steam_id_host", lobby.Host.SteamID);
             command.Parameters.AddWithValue("@password", lobby.Password);
             int lobbyID = await ExecuteScalar(command);
 
-            StringBuilder queryBuilder = new StringBuilder("Insert into match_player_stats (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
+            StringBuilder queryBuilder = new StringBuilder("Insert into lobby_players (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
             List<Player> players = lobby.WaitingList;
             for (int i = 0; i < players.Count; i++)
             {
@@ -341,7 +352,7 @@ namespace BanjoBotCore
 
             for (int i = 0; i < players.Count; i++)
             {
-                command.Parameters.AddWithValue("@lobby_id" + i, lobby.League.LeagueID);
+                command.Parameters.AddWithValue("@lobby_id" + i, lobbyID);
                 command.Parameters.AddWithValue("@steam_id" + i, players[i].SteamID);
                 command.Parameters.AddWithValue("@cancel_call" + i, lobby.CancelCalls.Contains(players[i]));
                 command.Parameters.AddWithValue("@red_win_call" + i, lobby.RedWinCalls.Contains(players[i]));
@@ -615,10 +626,10 @@ namespace BanjoBotCore
             log.Debug("GetLobbies");
             List<Lobby> lobbies = new List<Lobby>();
             MySqlCommand command = new MySqlCommand();
-            command.CommandText = string.Format("Select * from lobbies l " +
+            command.CommandText = "Select * from lobbies l " +
                                                 "inner join lobby_players lp on l.lobby_id = lp.lobby_id " +
                                                 "where l.league_id = @league_id " +
-                                                "AND closed = false");
+                                                "AND closed = 0";
             command.Parameters.AddWithValue("@league_id", leagueID);
 
             using (MySqlDataReader reader = await ExecuteReader(command))
@@ -657,7 +668,7 @@ namespace BanjoBotCore
                         {
                             steam_id_host = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("match_id"))
+                        else if (!reader.IsDBNull(i) &&  reader.GetName(i).Equals("match_id"))
                         {
                             match_id = reader.GetInt32(i);
                         }
@@ -665,7 +676,7 @@ namespace BanjoBotCore
                         {
                             password = reader.GetString(i);
                         }
-                        else if (reader.GetName(i).Equals("discord_message"))
+                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("discord_message"))
                         {
                             discord_message = reader.GetUInt64(i);
                         }

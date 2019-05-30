@@ -85,11 +85,11 @@ namespace BanjoBotCore.Controller {
             if (logMessage.Exception is CommandException cmdException)
             {
                 // We can tell the user that something unexpected has happened
-                await cmdException.Context.Channel.SendMessageAsync("Something went catastrophically wrong!");
+                log.Fatal("Something went catastrophically wrong!");
 
                 // We can also log this incident
                 log.Error($"{cmdException.Context.User} failed to execute '{cmdException.Command.Name}' in {cmdException.Context.Channel}.");
-                log.Error(cmdException.ToString());
+                log.Fatal(cmdException.ToString());
             }
         }
 
