@@ -16,5 +16,7 @@ namespace BanjoBotCore.Controller
 
         void NewApplicant(object sender, RegistrationEventArgs e);
         void AddedPlayerToLeague(object sender, RegistrationEventArgs e);
+
+        void SeasonEnded(object sender, SeasonEventArgs e);
     }
 }

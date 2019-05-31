@@ -38,6 +38,8 @@ namespace BanjoBotCore
             LobbyChanged += listener.LobbyChanged;
             MatchEnded += listener.MatchEnded;
             PlayerAdded += listener.AddedPlayerToLeague;
+            SeasonEnded += listener.SeasonEnded;
+
         }
 
         public bool LobbyExists
@@ -309,8 +311,8 @@ namespace BanjoBotCore
 
         public async Task StartNewSeason()
         {
-
-            foreach(Player player in League.RegisteredPlayers)
+            await OnSeasonEnded(League, League.Season);
+            foreach (Player player in League.RegisteredPlayers)
             {
                 PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
                 player.PlayerStats.Add(newStats);
@@ -320,10 +322,8 @@ namespace BanjoBotCore
             League.Season++;
             League.Matches = new List<MatchResult>();
             League.GameCounter = 0;
-            await _database.UpdateLeague(League);
-
+            await _database.UpdateLeague(League);           
         }
-
         public async Task CloseLobbyByModerator(int matchID, Teams team) {
             Lobby startedGame = null;
             foreach (var runningGame in GamesInProgress) {
@@ -671,12 +671,26 @@ namespace BanjoBotCore
             }
         }
 
+        protected async Task OnSeasonEnded(League league, int season)
+        {
+            EventHandler<SeasonEventArgs> handler = SeasonEnded;
+            SeasonEventArgs args = new SeasonEventArgs();
+            args.League = league;
+            args.Season = season;
+
+            if (handler != null)
+            {
+                handler(this, args);
+            }
+        }
+
         public event EventHandler<RegistrationEventArgs> PlayerAdded;
         public event EventHandler<RegistrationEventArgs> ApplicantAdded;
         public event EventHandler<LeagueEventArgs> LobbyClosed;
         public event EventHandler<LeagueEventArgs> LobbyCreated;
         public event EventHandler<LeagueEventArgs> LobbyChanged;
         public event EventHandler<MatchEventArgs> MatchEnded;
+        public event EventHandler<SeasonEventArgs> SeasonEnded;
     }
 
     public class RegistrationEventArgs : EventArgs
@@ -690,6 +704,12 @@ namespace BanjoBotCore
         public League League { get; set; }
         public Lobby Lobby { get; set; }
         public List<Lobby> GamesInProgress { get; set; }
+    }
+
+    public class SeasonEventArgs : EventArgs
+    {
+        public League League { get; set; }
+        public int Season { get; set; }
     }
 
     public class MatchEventArgs : EventArgs
