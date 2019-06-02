@@ -61,6 +61,7 @@ namespace BanjoBotCore
             PlayerVotedCancel += listener.PlayerVotedCancel;
             MatchEnded += listener.MatchEnded;
             LobbyStarted += listener.LobbyStarted;
+            SeasonEnded += listener.SeasonEnded;
         }
 
         public bool LobbyExists
@@ -321,21 +322,22 @@ namespace BanjoBotCore
 
         public async Task StartNewSeason()
         {
-
-            foreach(Player player in League.RegisteredPlayers)
+            int season = League.Season;
+            
+            foreach (Player player in League.RegisteredPlayers)
             {
                 PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
                 player.PlayerStats.Add(newStats);
                 await _database.UpdatePlayerStats(player, newStats);
             }
-            
+
             League.Season++;
             League.Matches = new List<Match>();
             League.GameCounter = 0;
             await _database.UpdateLeague(League);
 
+            await OnSeasonEnded(League, season);
         }
-
         public async Task CloseLobbyByModerator(int matchID, Teams team) {
             Lobby startedGame = null;
             foreach (var runningGame in League.LobbyInProgress) {
@@ -774,6 +776,16 @@ namespace BanjoBotCore
 
             handler?.Invoke(this, args);
         }
+
+        protected async Task OnSeasonEnded(League league, int season)
+        {
+            EventHandler<SeasonEventArgs> handler = SeasonEnded;
+            SeasonEventArgs args = new SeasonEventArgs();
+            args.League = league;
+            args.Season = season;
+            
+            handler?.Invoke(this, args);
+        }
     }   
 
     public class LeagueEventArgs : EventArgs
@@ -805,6 +817,11 @@ namespace BanjoBotCore
     public class MatchEventArgs : LeagueEventArgs
     {
         public Match Match { get; set; }
+    }
+
+    public class SeasonEventArgs : LeagueEventArgs
+    {
+        public int Season { get; set; }
     }
 
     [Serializable]
