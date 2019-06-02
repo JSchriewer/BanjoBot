@@ -311,18 +311,21 @@ namespace BanjoBotCore
 
         public async Task StartNewSeason()
         {
-            await OnSeasonEnded(League, League.Season);
+            int season = League.Season;
+            
             foreach (Player player in League.RegisteredPlayers)
             {
                 PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
                 player.PlayerStats.Add(newStats);
                 await _database.UpdatePlayerStats(player, newStats);
             }
-            
+
             League.Season++;
             League.Matches = new List<MatchResult>();
             League.GameCounter = 0;
-            await _database.UpdateLeague(League);           
+            await _database.UpdateLeague(League);
+
+            await OnSeasonEnded(League, season);
         }
         public async Task CloseLobbyByModerator(int matchID, Teams team) {
             Lobby startedGame = null;

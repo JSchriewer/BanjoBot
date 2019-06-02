@@ -777,7 +777,6 @@ namespace BanjoBotCore.Controller
 
             foreach (var player in lc.League.GetLeaderBoard())
             {
-                Console.Write("player: " + player.discordID + " steam: " + player.SteamID);
                 if (s.Length > 1800)
                 {
                     await SendMessage(channel, "```" + s + "```");
@@ -793,8 +792,6 @@ namespace BanjoBotCore.Controller
                 };
 
                 s += String.Format("{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-8} {6,-8}{7,-8}\n", args);
-
-
             }
 
             await SendMessage(channel,"```" + s + "```");
