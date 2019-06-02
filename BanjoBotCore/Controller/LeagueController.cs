@@ -33,6 +33,7 @@ namespace BanjoBotCore
         private event EventHandler<LobbyPlayerEventArgs> PlayerVotedCancel;
         private event EventHandler<LobbyVoteEventArgs> PlayerVoted;
         private event EventHandler<MatchEventArgs> MatchEnded;
+        private event EventHandler<SeasonEventArgs> SeasonEnded;
 
 
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));

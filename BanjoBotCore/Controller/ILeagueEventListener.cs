@@ -19,6 +19,7 @@ namespace BanjoBotCore.Controller
         void MatchEnded(object sender, MatchEventArgs e);
         void PlayerRegistrationAccepted(object sender, RegistrationEventArgs e);
         void PlayerRegistered(object sender, RegistrationEventArgs e);
-       
+        void SeasonEnded(object sender, SeasonEventArgs e);
+
     }
 }
