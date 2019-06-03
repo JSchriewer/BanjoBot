@@ -48,7 +48,7 @@ namespace BanjoBotCore {
                 if (s.Length + nextMsg.Length > 2000)
                 {
                     await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
-                    s = "";
+                    s = nextMsg;
                 } else
                 {
                     s += nextMsg;
@@ -58,20 +58,6 @@ namespace BanjoBotCore {
 
             if(s.Length > 0)
                 await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
-        }
-
-        [Command("help"), Summary("Shows usage and description of a specific command"), Alias(new string[] { "h", "?" })]
-        public async Task Help([Summary("Commandstring")]String commandString)
-        {
-
-            foreach (var command in _commandService.Commands)
-            {
-                if (command.Aliases.Any(commandString.Equals))
-                {
-                    String s = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
-                    await ReplyAsync("```" + s + "```");
-                }               
-            }
         }
 
         [Command("hostgame"), Summary("Creates a new game (if there is no open lobby)"), Alias(new string[] { "host", "hg" }), RequireLeaguePermission]

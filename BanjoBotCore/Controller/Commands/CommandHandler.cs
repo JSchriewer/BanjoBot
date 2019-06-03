@@ -20,7 +20,6 @@ namespace BanjoBotCore.Controller {
         private readonly IServiceProvider _provider;
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
-        //private readonly ILogger _logger;
 
         public CommandHandler(IServiceProvider provider) {
             _provider = provider;
@@ -50,18 +49,6 @@ namespace BanjoBotCore.Controller {
             var context = new SocketCommandContext(_client, message);
             log.Info($"{context.User.Username} tries to execute '{context.Message}' in {context.Channel}.");
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
-            
-            //if (result is SearchResult search && !search.IsSuccess)
-            //    await message.AddReactionAsync(EmojiExtensions.FromText(":mag_right:"));
-            //else if (result is PreconditionResult precondition && !precondition.IsSuccess)
-            //    await message.AddReactionAsync(EmojiExtensions.FromText(":no_entry:"));
-            //else if (result is ParseResult parse && !parse.IsSuccess)
-            //    await message.Channel.SendMessageAsync($"**Parse Error:** {parse.ErrorReason}");
-            //else if (result is TypeReaderResult reader && !reader.IsSuccess)
-            //    await message.Channel.SendMessageAsync($"**Read Error:** {reader.ErrorReason}");
-            //else if (!result.IsSuccess)
-            //    await message.AddReactionAsync(EmojiExtensions.FromText(":rage:"));
-            //_logger.Debug("Invoked {Command} in {Context} with {Result}", message, context.Channel, result);
         }
 
         private bool ParseTriggers(SocketUserMessage message, ref int argPos) {
@@ -81,32 +68,20 @@ namespace BanjoBotCore.Controller {
 
         public async Task LogAsync(LogMessage logMessage)
         {
-            // This casting type requries C#7
             if (logMessage.Exception is CommandException cmdException)
             {
-                // We can tell the user that something unexpected has happened
-                log.Fatal("Something went catastrophically wrong!");
-
-                // We can also log this incident
                 log.Error($"{cmdException.Context.User} failed to execute '{cmdException.Command.Name}' in {cmdException.Context.Channel}.");
-                log.Fatal(cmdException.ToString());
+                log.Error(cmdException.ToString());
             }
         }
 
         public async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
-            // We have access to the information of the command executed,
-            // the context of the command, and the result returned from the
-            // execution in this event.
-
-            // We can tell the user what went wrong
             if (!string.IsNullOrEmpty(result?.ErrorReason))
             {
                 await context.Channel.SendMessageAsync(result.ErrorReason);
             }
 
-            // ...or even log the result (the method used should fit into
-            // your existing log handler)
             var commandName = command.IsSpecified ? command.Value.Name : "A command";
             log.Info("CommandExecution by " + context.User.Username + " : !" + commandName);
         }

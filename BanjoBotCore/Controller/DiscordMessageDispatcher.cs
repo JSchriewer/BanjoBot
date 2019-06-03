@@ -9,8 +9,8 @@ namespace BanjoBotCore.Controller
 {
     public class DiscordMessageDispatcher
     {
-        public static readonly int MAX_MESSAGE_LENGTH = 2000; 
-        public static readonly int INTERVAL = 2000;
+        public const int MAX_MESSAGE_LENGTH = 2000; 
+        public const int INTERVAL = 2000;
 
         private Queue<Message> queue = new Queue<Message>();
 
