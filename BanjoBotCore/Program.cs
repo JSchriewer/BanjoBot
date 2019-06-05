@@ -83,7 +83,6 @@ namespace BanjoBotCore
             _messageDispatcher = new DiscordMessageDispatcher();
             _commandController = new CommandController(_messageDispatcher);
             _databaseController = new DatabaseController();
-            //_socketServer = new SocketServer(_leagueCoordinator, _databaseController);
 
             Thread t = new Thread(new ThreadStart(_messageDispatcher.Run));
             t.Start();
@@ -107,10 +106,6 @@ namespace BanjoBotCore
                 .AddSingleton<IConfiguration>(_config);
             var provider = new DefaultServiceProviderFactory().CreateServiceProvider(services);
 
-            // Autowire and create these dependencies now
-            //provider.GetService<LogAdaptor>();
-            //provider.GetService<TagService>();
-            //provider.GetService<GitHubService>();
             return provider;
         }
 
@@ -191,6 +186,7 @@ namespace BanjoBotCore
         private async Task LoadLobbies(League league)
         {
             _log.Info($"Loading open lobbies of {league.Name}({league.LeagueID})");
+            LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
             List<Lobby> lobbies = await _databaseController.GetLobbies(league.LeagueID, league.RegisteredPlayers);
             foreach (var lobby in lobbies)
             {
@@ -208,12 +204,12 @@ namespace BanjoBotCore
                         _log.Warn($"Loading Lobby: Couldn't find match #{lobby.MatchID}");
                         continue;
                     }
-                       
-                    league.LobbyInProgress.Add(lobby);
+
+                    lc.LobbyController.StartedLobbies.Add(lobby);
                 }
                 else
                 {
-                    league.Lobby = lobby;
+                    lc.LobbyController.OpenLobby = lobby;
                 }
 
                 foreach (var player in lobby.WaitingList)

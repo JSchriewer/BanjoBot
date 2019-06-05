@@ -31,7 +31,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.HostLobby(player);
+                await lc.LobbyController.HostLobby(player,lc.League);
             }
             catch(LeagueException e)
             {
@@ -46,7 +46,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.JoinLobby(player);
+                await lc.LobbyController.JoinLobby(player);
             }
             catch (LeagueException e)
             {
@@ -61,7 +61,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.LeaveLobby(player);
+                await lc.LobbyController.LeaveLobby(player);
             }
             catch (LeagueException e)
             {
@@ -88,7 +88,7 @@ namespace BanjoBotCore.Controller
 
             try
             {
-                await lc.KickPlayer(player);
+                await lc.LobbyController.KickPlayer(player);
             }
             catch (LeagueException e)
             {
@@ -103,11 +103,8 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.CancelLobbyByCommand(player);
-            }
-            catch (InsufficientPermissionException e)
-            {
-
+                if (player == player.CurrentGame?.Host || player.User.Roles.Contains(lc.League.DiscordInformation.ModeratorRole) || player.User.GuildPermissions.Administrator)
+                    await lc.LobbyController.CancelLobbyByCommand(player);
             }
             catch (LeagueException e)
             {
@@ -124,7 +121,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.VoteCancel(player);
+                await lc.LobbyController.VoteCancel(player);
             }
             catch (LeagueException e)
             {
@@ -140,7 +137,7 @@ namespace BanjoBotCore.Controller
 
             try
             {
-                await lc.VoteWinner(player, team);
+                await lc.LobbyController.VoteWinner(player, team);
             }
             catch (LeagueException e)
             {
@@ -187,7 +184,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.StartGame(player);
+                await lc.LobbyController.StartGame(player);
             }
             catch (LeagueException e)
             {
@@ -208,7 +205,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.CloseLobbyByModerator(matchID, team);
+                await lc.LobbyController.EndMatch(matchID, team);
             }
             catch (LeagueException e)
             {
@@ -222,15 +219,15 @@ namespace BanjoBotCore.Controller
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
 
-            if (lc.LobbyExists)
-                await SendTempMessage(channel, $"Open lobby: ({lc.League.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            if (lc.LobbyController.LobbyExists)
+                await SendTempMessage(channel, $"Open lobby: ({lc.LobbyController.OpenLobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
             else
                 await SendTempMessage(channel, "No games in lobby.");
 
-            if (lc.League.LobbyInProgress.Count > 0)
+            if (lc.LobbyController.StartedLobbies.Count > 0)
             {
                 String message = "Games in progress: ";
-                foreach (var game in lc.League.LobbyInProgress)
+                foreach (var game in lc.LobbyController.StartedLobbies)
                 {
                     message += "#" + game.MatchID;
                 }
@@ -244,14 +241,14 @@ namespace BanjoBotCore.Controller
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
            
-            if (!lc.LobbyExists)
+            if (!lc.LobbyController.LobbyExists)
             {
                 await SendTempMessage(channel, "No games open. Type !hostgame to create a game.");
                 return;
             }
 
-            String message = $"Lobby ({lc.League.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})  players: \n";
-            foreach (Player p in lc.League.Lobby.WaitingList)
+            String message = $"Lobby ({lc.LobbyController.OpenLobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})  players: \n";
+            foreach (Player p in lc.LobbyController.OpenLobby.WaitingList)
             {
                 message += p.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + " ";
             }
@@ -411,7 +408,6 @@ namespace BanjoBotCore.Controller
             if (season == -1)
                 season = lc.League.Season;
 
-            // Sort dictionary by MMR
             List<Player> leaderboard = lc.League.GetLeaderBoard(season);
 
             bool inTopTen = false;
@@ -456,6 +452,7 @@ namespace BanjoBotCore.Controller
         public async Task ReCreateLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, int matchID, IGuildUser playerToRemove)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            Player player = lc.League.GetPlayerByDiscordID(playerToRemove.Id);
             if (lc == null)
             {
                 await SendMessage(channel,"This is no league channel.");
@@ -464,7 +461,7 @@ namespace BanjoBotCore.Controller
 
             try
             {
-                await lc.ReCreateLobby(matchID, playerToRemove);
+                await lc.LobbyController.ReCreateLobby(matchID, player);
             }
             catch (LeagueException e)
             {
@@ -950,22 +947,6 @@ namespace BanjoBotCore.Controller
             }
         }
 
-        private async Task UpdateChannelDescription(SocketTextChannel leagueChannel,  int playersWaiting, int runningGames)
-        {
-            if(leagueChannel == null)
-            {
-                return;
-            }
-
-            string topic = "";
-            if (playersWaiting == 0)
-                topic = "Games in progress: " + runningGames;
-            else
-                topic = $"Open Lobby ({playersWaiting}/{Lobby.MAXPLAYERS})" + "    Games in progress: " + runningGames;
-
-            await leagueChannel.ModifyAsync(channelProperties => channelProperties.Topic = topic);
-        }
-
         private async Task SendPrivateMessage(IGuildUser user, String message)
         {
             await (await user.GetOrCreateDMChannelAsync()).SendMessageAsync(message);
@@ -1007,9 +988,8 @@ namespace BanjoBotCore.Controller
                 await e.Lobby.StartMessage.UnpinAsync();
             }
 
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             await SendMessage(channel, "Lobby closed");
-            await UpdateChannelDescription(channel, 0, e.League.LobbyInProgress.Count);
         }
 
         public async void LobbyCreated(object sender, LobbyPlayerEventArgs e)
@@ -1017,47 +997,41 @@ namespace BanjoBotCore.Controller
             if (e == null)
                 return;
 
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             Player host = e.Lobby.Host;
-            await SendMessage(channel, $"New Lobby created by {host.PlayerMMRString(e.League.LeagueID, e.League.Season)}. \nType !join to join the game. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
-            await UpdateChannelDescription(channel, e.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
+            await SendMessage(channel, $"New Lobby created by {host.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)}. \nType !join to join the game. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
         }
 
         public async void PlayerJoined(object sender, LobbyPlayerEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.League.LeagueID, e.League.Season)} has joined the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
+            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has joined the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
             await SendPrivateMessage(e.Player.User as IGuildUser, "Password for the Dota 2 lobby: " + e.Lobby.Password);
-            await UpdateChannelDescription(channel, e.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
         }
 
         public async void PlayerLeft(object sender, LobbyPlayerEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.League.LeagueID, e.League.Season)} has left the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
-            await UpdateChannelDescription(channel, e.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
+            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has left the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
         }
 
         public async void PlayerKicked(object sender, LobbyPlayerEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             await SendMessage(channel, $"{ e.Player.User.Mention} got kicked from the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
-            await UpdateChannelDescription(channel, e.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
         }
 
         public async void PlayerVotedCancel(object sender, LobbyPlayerEventArgs e)
         {
 
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             await SendMessage(channel, "Vote recorded to cancel game by " + e.Player.Name + " (" + e.Lobby.CancelCalls.Count() + "/" + e.Lobby.GetCancelThreshold() + ")");
-            await UpdateChannelDescription(channel, e.Lobby.WaitingList.Count, e.League.LobbyInProgress.Count);
         }
 
         public async void LobbyCanceled(object sender, LobbyPlayerEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, "Lobby got canceled canceled by vote.");                
-            await UpdateChannelDescription(channel, 0, e.League.LobbyInProgress.Count);
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
+            await SendMessage(channel, "Lobby got canceled canceled");
         }
    
 
@@ -1074,27 +1048,26 @@ namespace BanjoBotCore.Controller
 
         public async void LobbyStarted(object sender, LobbyEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             String startmessage = "BBL#" + e.Lobby.Match.MatchID + " has been started.";
             String blueTeam = "Blue Team (" + e.Lobby.Match.GetTeamMMR(Teams.Blue) + "): ";
             foreach (var p in e.Lobby.Match.GetTeam(Teams.Blue))
             {
-                blueTeam += p.User.Mention + "(" + p.GetLeagueStats(e.League.LeagueID, e.League.Season).MMR + ") ";
+                blueTeam += p.User.Mention + "(" + p.GetLeagueStats(e.Lobby.League.LeagueID, e.Lobby.League.Season).MMR + ") ";
             }
             String redTeam = "Red Team (" + e.Lobby.Match.GetTeamMMR(Teams.Red) + "): ";
             foreach (var p in e.Lobby.Match.GetTeam(Teams.Red))
             {
-                redTeam += p.User.Mention + "(" + p.GetLeagueStats(e.League.LeagueID, e.League.Season).MMR + ") ";
+                redTeam += p.User.Mention + "(" + p.GetLeagueStats(e.Lobby.League.LeagueID, e.Lobby.League.Season).MMR + ") ";
             }
 
             e.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await e.Lobby.StartMessage.PinAsync();
-            await UpdateChannelDescription(channel, e.League.Lobby != null ? e.League.Lobby.WaitingList.Count : 0, e.League.LobbyInProgress.Count);
         }
        
         public async void PlayerVoted(object sender, LobbyVoteEventArgs e)
         {
-            SocketTextChannel channel = e.League.DiscordInformation.Channel as SocketTextChannel;
+            SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             String message = "";
             if(e.prevVote != Teams.None)
             {
@@ -1150,10 +1123,8 @@ namespace BanjoBotCore.Controller
                 "\n\n If you need help, ask a moderator or use !help \n\n Note: Please make sure you read the rules, you can find them in the channel #rules\n");
             IUserMessage message;
             
-            //TODO: Can only handle 1 registration message per user
             _signups.TryGetValue(e.Player.User.Id, out message);
-            //await _signups[e.Player.User.Id].UnpinAsync();
-            await message.UnpinAsync();
+            await message?.UnpinAsync();
             _signups.Remove(e.Player.User.Id);
         }
 

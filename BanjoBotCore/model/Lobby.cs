@@ -152,7 +152,7 @@ namespace BanjoBotCore.Model
 
         internal int GetCancelThreshold()
         {
-            return (int)Math.Ceiling((double)League.Lobby.WaitingList.Count() / 2);
+            return (int)Math.Ceiling((double)WaitingList.Count() / 2);
         }
     }
 }

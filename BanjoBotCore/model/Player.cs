@@ -72,8 +72,8 @@ namespace BanjoBotCore.Model
                 if (leagueStat.LeagueID == leagueID && leagueStat.Season == season)
                     return leagueStat;
             }
+            
 
-            //Return value should not be null
             PlayerStats stats = new PlayerStats(leagueID, season);
             PlayerStats.Add(new PlayerStats(leagueID, season));
             return stats;
@@ -104,43 +104,64 @@ namespace BanjoBotCore.Model
             return result;
         }
 
-        public void IncMatches(int leagueID, int season)
+        public void AdjustStats(League league, bool win, int mmrAdjustment)
+        {
+            if (win)
+            {
+                IncWins(league.LeagueID, league.Season);
+                IncMMR(league.LeagueID, league.Season, mmrAdjustment + 2 * GetLeagueStats(league.LeagueID, league.Season).Streak);
+                IncStreak(league.LeagueID, league.Season);
+                IncMatches(league.LeagueID, league.Season);
+            }
+            else
+            {
+                IncLosses(league.LeagueID, league.Season);
+                SetStreakZero(league.LeagueID, league.Season);
+                DecMMR(league.LeagueID, league.Season, mmrAdjustment);
+                IncMatches(league.LeagueID, league.Season);
+                if (GetLeagueStats(league.LeagueID, league.Season).MMR < 0)
+                    SetMMR(league.LeagueID, league.Season, 0);
+            }
+     
+        }
+
+        public bool IsIngame
+        {
+            get { return CurrentGame != null; }
+        }
+
+        private void IncMatches(int leagueID, int season)
         {
             GetLeagueStats(leagueID, season).MatchCount++;
         }
 
-        public void IncMMR(int leagueID, int season, int mmr) {
+        private void IncMMR(int leagueID, int season, int mmr) {
             GetLeagueStats(leagueID, season).MMR += mmr;
         }
 
-        public void SetMMR(int leagueID, int season, int mmr) {
+        private void SetMMR(int leagueID, int season, int mmr) {
             GetLeagueStats(leagueID, season).MMR = mmr;
         }
 
-        public void DecMMR(int leagueID, int season, int mmr) {
+        private void DecMMR(int leagueID, int season, int mmr) {
             GetLeagueStats(leagueID, season).MMR -= mmr;
         }
 
-        public void IncWins(int leagueID, int season)
+        private void IncWins(int leagueID, int season)
         {
             GetLeagueStats(leagueID, season).Wins++;
         }
 
-        public void IncLosses(int leagueID, int season)
+        private void IncLosses(int leagueID, int season)
         {
             GetLeagueStats(leagueID, season).Losses++;
         }
-        public void IncStreak(int leagueID, int season)
+        private void IncStreak(int leagueID, int season)
         {
             GetLeagueStats(leagueID, season).Streak++;
         }
-        public void SetStreakZero(int leagueID, int season) {
+        private void SetStreakZero(int leagueID, int season) {
             GetLeagueStats(leagueID, season).Streak = 0;
         }
-        public bool IsIngame
-        {
-            get{ return CurrentGame != null; }
-        }
-
     }
 }

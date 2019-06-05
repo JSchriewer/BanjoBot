@@ -60,12 +60,9 @@ namespace BanjoBotCore.Model
             }
         }
 
-        public async Task SetMatchResult(Teams winner)
+        public async Task SetMatchResult(Teams winner, int mmrAdjustment)
         {
             Winner = winner;
-            List<Player> team1 = GetTeam(Teams.Blue);
-            List<Player> team2 = GetTeam(Teams.Red);
-            int mmrAdjustment = MatchMaker.CalculateMmrAdjustment(team1, team2,League.LeagueID,League.Season);
 
             foreach (var stats in PlayerMatchStats)
             {
@@ -103,16 +100,6 @@ namespace BanjoBotCore.Model
 
             return null;
         }
-        /// <summary>
-        /// Returns the average MMR of all players on the team.
-        /// </summary>
-        /// <param name="team">Can be either Blue or Red.</param>
-        /// <returns>Average MMR as int.</returns>
-        public int GetTeamMMR(Teams team)
-        {
-            return (int)MatchMaker.GetTeamMMR(GetTeam(team), League.LeagueID, League.Season);
-
-        }
 
         public List<Player> GetTeam(Teams team)
         {
@@ -124,6 +111,51 @@ namespace BanjoBotCore.Model
         {
             List<Player> players = PlayerMatchStats.Select(s => s.Player).ToList<Player>();
             return players;
+        }
+        
+        public List<Player> GetWinnerTeam()
+        {
+            if (Winner == Teams.None || Winner == Teams.Draw)
+            {
+                return null;
+            }
+
+            if (Winner == Teams.Blue)
+                return GetTeam(Teams.Blue);
+            else
+                return GetTeam(Teams.Red);
+        }
+
+        public List<Player> GetLoserTeam()
+        {
+            if (Winner == Teams.None || Winner == Teams.Draw)
+            {
+                return null;
+            }
+
+            if (Winner == Teams.Blue)
+                return GetTeam(Teams.Red);
+            else
+                return GetTeam(Teams.Blue);
+        }
+
+        public int GetTeamMMR(Teams team)
+        {
+            List<Player> teamList = GetTeam(team);
+            int averageMMR = 0;
+            foreach (var player in teamList)
+            {
+                averageMMR += player.GetLeagueStats(League.LeagueID, Season).MMR;
+            }
+
+            if (teamList.Count > 0)
+            {
+                averageMMR = averageMMR / teamList.Count;
+            }
+
+
+
+            return averageMMR;
         }
     }
 }

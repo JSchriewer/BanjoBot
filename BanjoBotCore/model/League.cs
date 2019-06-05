@@ -15,8 +15,6 @@ namespace BanjoBotCore.Model
         public List<Player> RegisteredPlayers { get; set; }
         public List<Player> Applicants { get; set; }
         public List<Match> Matches { get; set; }
-        public Lobby Lobby { get; set; }
-        public List<Lobby> LobbyInProgress { get; set; }
         public int Season { get; set; }
         public int GameCounter { get; set; }
 
@@ -28,7 +26,6 @@ namespace BanjoBotCore.Model
             RegisteredPlayers = new List<Player>();
             Applicants = new List<Player>();
             Matches = new List<Match>();
-            LobbyInProgress = new List<Lobby>();
         }
 
         public Player GetPlayerByDiscordID(ulong id)

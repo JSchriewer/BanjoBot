@@ -10,12 +10,10 @@ namespace BanjoBotCore.Model
     public static class MatchMaker
     {
         public const int BASE_MMR = 25;
-
-
-        public static int CalculateMmrAdjustment(List<Player> team1, List<Player> team2, int leagueID, int season)
+        
+        public static int CalculateMmrAdjustment(int team1MMR, int team2MMR, int leagueID, int season)
         {
-            double mmrDifference = GetTeamMMR(team1, leagueID, season) - GetTeamMMR(team2, leagueID, season);
-
+            double mmrDifference = team1MMR - team2MMR;
             return mmrCurve(mmrDifference);
         }
 
@@ -60,8 +58,8 @@ namespace BanjoBotCore.Model
                     storedTeams = s;
                 }
             }
+            
 
-            // Assign the players to teams
             for (int i = 0; i < numPlayers; i++)
             {
                 if (storedTeams[i] == 1)
@@ -72,29 +70,6 @@ namespace BanjoBotCore.Model
 
             return new Tuple<List<Player>, List<Player>>(team1, team2);
         }
-
-        public static double GetTeamMMR(List<Player> team, int leagueID, int season)
-        {
-            int averageMMR = 0;
-            foreach (var player in team)
-            {
-                averageMMR += player.GetLeagueStats(leagueID, season).MMR;
-            }
-           
-            if(team.Count > 0) {
-                averageMMR = averageMMR / team.Count;
-            }
-        
-            
-
-            return averageMMR;
-        }
-
-        /// <summary>
-        /// By Kael
-        /// </summary>
-        /// <param name="numPlayers">Number of players in the game.</param>
-        /// <returns></returns>
         private static List<List<int>> TryCombinations(int numPlayers)
         {
             var output = new List<List<int>>();
