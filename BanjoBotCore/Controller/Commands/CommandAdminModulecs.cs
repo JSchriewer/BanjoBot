@@ -3,9 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using log4net;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
@@ -38,7 +36,6 @@ namespace BanjoBotCore.Controller
 
             foreach (var command in _commandService.Commands.Where(cmd => cmd.Module.Name == "AdminModule"))
             {
-
                 String nextMsg = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
                 if (s.Length + nextMsg.Length > 2000)
                 {
@@ -49,7 +46,6 @@ namespace BanjoBotCore.Controller
                 {
                     s += nextMsg;
                 }
-
             }
 
             if (s.Length > 0)
@@ -68,8 +64,8 @@ namespace BanjoBotCore.Controller
             {
                 socketGuildChannel = (SocketGuildChannel)Context.Channel;
             }
-            
-            await _commandController.SetModChannel(Context.Channel, socketGuildChannel,modChannel);
+
+            await _commandController.SetModChannel(Context.Channel, socketGuildChannel, modChannel);
         }
 
         [Command("autoaccept"), Summary("(Admin) !autoaccept <true/false> [#league_channel] | Registrations do not have to be manually accepted by a moderator if activated"), RequireUserPermission(GuildPermission.Administrator)]
@@ -102,7 +98,6 @@ namespace BanjoBotCore.Controller
             }
 
             await _commandController.SetSteamRegister(Context.Channel, socketGuildChannel, steamregister);
-
         }
 
         [Command("createleague"), Summary("(Admin) !createLeague <Name> [#league_channel] | Creates a league"), RequireUserPermission(GuildPermission.Administrator)]
@@ -135,7 +130,6 @@ namespace BanjoBotCore.Controller
             }
 
             await _commandController.DeleteLeague(Context.Channel, socketGuildChannel);
-
         }
 
         [Command("setchannel"), Summary("(Admin) !setchannel #new_league_channel [#old_league_channel] | Sets the league channel"), RequireUserPermission(GuildPermission.Administrator)]
@@ -152,7 +146,6 @@ namespace BanjoBotCore.Controller
             }
 
             await _commandController.SetChannel(Context.Channel, (SocketGuildChannel)newChannel, socketGuildChannel);
-
         }
 
         [Command("setrole"), Summary("(Admin) !setrole [@Role] [#league_channel] | Sets or delete the league role"), RequireUserPermission(GuildPermission.Administrator)]
@@ -201,7 +194,6 @@ namespace BanjoBotCore.Controller
             }
 
             await _commandController.StartNewSeason(Context.Channel, socketGuildChannel);
-
         }
     }
 }

@@ -1,22 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 public enum Teams { Blue, Red, Draw, None };
 
 namespace BanjoBotCore.Model
 {
-    public class Match {
+    public class Match
+    {
         public int MatchID { get; set; }
         public League League { get; set; }
         public int LeagueID { get; set; }
         public ulong SteamMatchID { get; set; }
         public int Season { get; set; }
-        public Teams Winner { get; set; }  = Teams.None;
+        public Teams Winner { get; set; } = Teams.None;
         public DateTime Date { get; set; }
         public int Duration { get; set; }
         public bool StatsRecorded { get; set; }
@@ -36,7 +34,8 @@ namespace BanjoBotCore.Model
             StatsRecorded = statsRecorded;
         }
 
-        public Match(Lobby lobby) {
+        public Match(Lobby lobby)
+        {
             //TODO: LeagueID, Season needed?
             League = lobby.League;
             LeagueID = lobby.League.LeagueID;
@@ -82,7 +81,6 @@ namespace BanjoBotCore.Model
                 }
                 else
                 {
-
                     stats.MmrAdjustment = -mmrAdjustment;
                     stats.StreakBonus = 0;
                     stats.Win = false;
@@ -92,7 +90,7 @@ namespace BanjoBotCore.Model
 
         public async Task<MatchPlayerStats> GetPlayerStats(Player player)
         {
-            foreach(MatchPlayerStats stats in PlayerMatchStats)
+            foreach (MatchPlayerStats stats in PlayerMatchStats)
             {
                 if (stats.Player == player)
                     return stats;
@@ -112,7 +110,7 @@ namespace BanjoBotCore.Model
             List<Player> players = PlayerMatchStats.Select(s => s.Player).ToList<Player>();
             return players;
         }
-        
+
         public List<Player> GetWinnerTeam()
         {
             if (Winner == Teams.None || Winner == Teams.Draw)
@@ -152,8 +150,6 @@ namespace BanjoBotCore.Model
             {
                 averageMMR = averageMMR / teamList.Count;
             }
-
-
 
             return averageMMR;
         }

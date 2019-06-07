@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using log4net.Core;
-using log4net.Repository.Hierarchy;
 using log4net;
-using Discord;
+using System;
+using System.Reflection;
+using System.Threading.Tasks;
 
-namespace BanjoBotCore.Controller {
-    class CommandHandler
+namespace BanjoBotCore.Controller
+{
+    internal class CommandHandler
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private const string PREFIX = "!";
@@ -21,9 +17,10 @@ namespace BanjoBotCore.Controller {
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _client;
 
-        public CommandHandler(IServiceProvider provider) {
+        public CommandHandler(IServiceProvider provider)
+        {
             _provider = provider;
-            _client = (DiscordSocketClient)_provider.GetService(typeof(DiscordSocketClient));            
+            _client = (DiscordSocketClient)_provider.GetService(typeof(DiscordSocketClient));
             _commands = (CommandService)_provider.GetService(typeof(CommandService));
 
             //var log = _provider.GetService<LogAdaptor>();
@@ -31,27 +28,30 @@ namespace BanjoBotCore.Controller {
             //_logger = _provider.GetService<Logger>().ForContext<CommandService>();
         }
 
-        public async Task ConfigureAsync() {
+        public async Task ConfigureAsync()
+        {
             _client.MessageReceived += ProcessCommandAsync;
             _commands.CommandExecuted += OnCommandExecutedAsync;
             _commands.Log += LogAsync;
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
         }
 
-        private async Task ProcessCommandAsync(SocketMessage pMsg) {
+        private async Task ProcessCommandAsync(SocketMessage pMsg)
+        {
             var message = pMsg as SocketUserMessage;
             if (message == null) return;
             if (pMsg.Channel is IDMChannel) return;
             if (message.Content.StartsWith("##")) return;
 
             int argPos = 0;
-            if (!ParseTriggers(message, ref argPos)) return;     
+            if (!ParseTriggers(message, ref argPos)) return;
             var context = new SocketCommandContext(_client, message);
             log.Info($"{context.User.Username} tries to execute '{context.Message}' in {context.Channel}.");
             var result = await _commands.ExecuteAsync(context, argPos, _provider);
         }
 
-        private bool ParseTriggers(SocketUserMessage message, ref int argPos) {
+        private bool ParseTriggers(SocketUserMessage message, ref int argPos)
+        {
             bool flag = false;
             if (message.HasMentionPrefix(_client.CurrentUser, ref argPos))
             {
@@ -61,7 +61,6 @@ namespace BanjoBotCore.Controller {
             {
                 flag = true;
             }
-
 
             return flag;
         }

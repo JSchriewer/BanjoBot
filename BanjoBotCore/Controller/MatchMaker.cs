@@ -1,16 +1,13 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BanjoBotCore.Model
 {
     public static class MatchMaker
     {
         public const int BASE_MMR = 25;
-        
+
         public static int CalculateMmrAdjustment(int team1MMR, int team2MMR, int leagueID, int season)
         {
             double mmrDifference = team1MMR - team2MMR;
@@ -24,7 +21,6 @@ namespace BanjoBotCore.Model
             double result = approachRate * approaches + BASE_MMR;
             return Convert.ToInt32(Math.Round(result));
         }
-
 
         public static Tuple<List<Player>, List<Player>> BalanceTeams(List<Player> players, League league)
         {
@@ -58,7 +54,6 @@ namespace BanjoBotCore.Model
                     storedTeams = s;
                 }
             }
-            
 
             for (int i = 0; i < numPlayers; i++)
             {
@@ -70,6 +65,7 @@ namespace BanjoBotCore.Model
 
             return new Tuple<List<Player>, List<Player>>(team1, team2);
         }
+
         private static List<List<int>> TryCombinations(int numPlayers)
         {
             var output = new List<List<int>>();

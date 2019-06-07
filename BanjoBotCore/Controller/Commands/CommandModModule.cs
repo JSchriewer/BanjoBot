@@ -1,12 +1,9 @@
-﻿using BanjoBotCore;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using log4net;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
@@ -39,7 +36,6 @@ namespace BanjoBotCore.Controller
 
             foreach (var command in _commandService.Commands.Where(cmd => cmd.Module.Name == "ModModule"))
             {
-
                 String nextMsg = String.Format("{0,-24} {1,-12}\n", String.Join(", ", command.Aliases.ToArray()), command.Summary);
                 if (s.Length + nextMsg.Length > 2000)
                 {
@@ -50,7 +46,6 @@ namespace BanjoBotCore.Controller
                 {
                     s += nextMsg;
                 }
-
             }
 
             if (s.Length > 0)
@@ -61,7 +56,7 @@ namespace BanjoBotCore.Controller
         public async Task EndGame([Summary("matchID")]int match, [Summary("team")]Teams team)
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.CloseLobbyByModerator(Context.Channel, socketGuildChannel, Context.User, match, team);
+            await _commandController.CloseLobbyByModerator(socketGuildChannel, match, team);
         }
 
         [Command("recreatelobby"), Summary("(Moderator) !rcl <Match_ID> @Player_to_remove | Kicks a Player from a started Match and reopens the Lobby"), Alias(new string[] { "rcl" })]
@@ -78,7 +73,7 @@ namespace BanjoBotCore.Controller
             await _commandController.KickPlayer(Context.Channel, socketGuildChannel, guildUser);
         }
 
-        //TODO: Cascade 
+        //TODO: Cascade
         //TODO: CHange Discord
         //[Command("changeSteam"), Summary("Changes the steamID of a user. !cs @player (moderator)"), Alias(new string[] { "cs" })]
         //public async Task ChangeSteam([Summary("@Player")]IGuildUser guildUser, ulong SteamID)
@@ -118,7 +113,6 @@ namespace BanjoBotCore.Controller
             }
 
             await _commandController.AcceptApplicant(Context.Channel, socketGuildChannel, guildUser);
-
         }
 
         [Command("decline"), Summary("(Moderator) !decline @Player [reasoning] [#league_channel] | Declines a applicant")]
@@ -141,14 +135,14 @@ namespace BanjoBotCore.Controller
         public async Task ListLeagues()
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.ListLeagues(Context.Channel, socketGuildChannel);
+            await _commandController.ListLeagues(socketGuildChannel);
         }
 
         [Command("listapplicants"), Summary("(Moderator) !listapplicants | Lists all applicants")]
         public async Task ListApplicants()
         {
             SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            await _commandController.ListApplicants(Context.Channel, socketGuildChannel);
+            await _commandController.ListApplicants(socketGuildChannel);
         }
 
         [Command("listplayers"), Summary("(Moderator) !listplayers #league_channel | Lists all registered players")]
@@ -182,7 +176,6 @@ namespace BanjoBotCore.Controller
                 return PreconditionResult.FromError("You are not a guild member");
             }
 
-           
             bool hasPermission = false;
             foreach (var leaguecontroller in LeagueCoordinator.Instance.GetLeagueControllersByServer((SocketGuild)context.Guild))
             {

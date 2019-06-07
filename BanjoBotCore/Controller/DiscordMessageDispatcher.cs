@@ -1,22 +1,19 @@
 ﻿using Discord;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
 {
     public class DiscordMessageDispatcher
     {
-        public const int MAX_MESSAGE_LENGTH = 2000; 
+        public const int MAX_MESSAGE_LENGTH = 2000;
         public const int INTERVAL = 2000;
 
         private Queue<Message> queue = new Queue<Message>();
 
         public DiscordMessageDispatcher()
         {
-            
         }
 
         public void AddQueue(Message message)
@@ -25,7 +22,6 @@ namespace BanjoBotCore.Controller
             {
                 queue.Enqueue(message);
             }
-           
         }
 
         public Message RemoveQueue()
@@ -34,7 +30,6 @@ namespace BanjoBotCore.Controller
             {
                 return queue.Dequeue();
             }
-         
         }
 
         public void Run()
@@ -63,7 +58,6 @@ namespace BanjoBotCore.Controller
                         {
                             channelMessages.Add(channelMessage);
                         }
-
                     }
 
                     //Send messages in chunks to reduce api calls
@@ -72,7 +66,7 @@ namespace BanjoBotCore.Controller
                     {
                         if (msg.Length + channelMessage.text.Length < 2000)
                         {
-                            msg += channelMessage.text +"\n";
+                            msg += channelMessage.text + "\n";
                         }
                         else
                         {
@@ -81,7 +75,7 @@ namespace BanjoBotCore.Controller
                             msg = channelMessage.text + "\n";
                         }
                     }
-                    if(msg.Length > 0)
+                    if (msg.Length > 0)
                         channel.SendMessageAsync(msg);
 
                     messages.RemoveAll(m => m.channel == channel);

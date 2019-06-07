@@ -1,42 +1,40 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using BanjoBotCore.Controller;
 using BanjoBotCore.Model;
 using Discord;
 using Discord.WebSocket;
 using log4net;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BanjoBotCore
 {
-
     //TODO: throw Exception in Remove/AddPLayer() <- bool? removePlayerResult = Lobby.RemovePlayer(user);
     //->Duplicated code LeavePlayer / KickPlayer
     //TODO: Don't catch database exceptions
     //->Use try{}finally{} for error handling wherever possible
     // Eventargs should be immutable -> implement ICloneable in Model classes or use DTOs later
-    
+
     public class LeagueController
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
 
         private event EventHandler<RegistrationEventArgs> PlayerRegistrationAccepted;
+
         private event EventHandler<RegistrationEventArgs> PlayerRegistered;
+
         private event EventHandler<SeasonEventArgs> SeasonEnded;
-        
+
         public League League { get; }
         public LobbyController LobbyController { get; }
         private DatabaseController _database;
 
         public LeagueController(League league)
-        {            
+        {
             League = league;
-            LobbyController =  new LobbyController();
+            LobbyController = new LobbyController();
             _database = new DatabaseController();
         }
-        
 
         public async Task RegisterEventListener(ILeagueEventListener listener)
         {
@@ -46,8 +44,6 @@ namespace BanjoBotCore
             await LobbyController.RegisterEventListener(listener);
         }
 
-      
-
         public async Task<Player> RegisterPlayer(SocketGuildUser user, ulong steamID)
         {
             log.Debug("Creating new player");
@@ -55,7 +51,6 @@ namespace BanjoBotCore
             try
             {
                 await _database.InsertPlayer(player);
-            
             }
             catch (Exception e)
             {
@@ -85,10 +80,9 @@ namespace BanjoBotCore
                 {
                     throw e;
                 }
-                
             }
         }
-        
+
         public async Task AcceptRegistration(Player player)
         {
             log.Debug("RegisterPlayer: " + player.Name + "(" + player.User.Id + ")");
@@ -99,7 +93,7 @@ namespace BanjoBotCore
                 await _database.InsertRegistrationToLeague(player, League);
                 await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw e;
             }
@@ -119,12 +113,10 @@ namespace BanjoBotCore
             await _database.DeleteRegistration(player.SteamID, League);
         }
 
-      
-
         public async Task StartNewSeason()
         {
             int season = League.Season;
-            
+
             foreach (Player player in League.RegisteredPlayers)
             {
                 PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
@@ -138,13 +130,14 @@ namespace BanjoBotCore
             await _database.UpdateLeague(League);
 
             await OnSeasonEnded(League, season);
-        }       
+        }
 
         public async Task SetModChannel(IChannel modChannel)
         {
             League.DiscordInformation.ModeratorChannel = (SocketGuildChannel)modChannel;
             await _database.UpdateLeague(League);
         }
+
         public async Task SetAutoAccept(Boolean autoAccept)
         {
             League.DiscordInformation.AutoAccept = autoAccept;
@@ -156,6 +149,7 @@ namespace BanjoBotCore
             League.DiscordInformation.NeedSteamToRegister = steamRegister;
             await _database.UpdateLeague(League);
         }
+
         public async Task SetChannel(SocketGuildChannel socketGuildChannel)
         {
             League.DiscordInformation.Channel = (SocketGuildChannel)socketGuildChannel;
@@ -183,6 +177,7 @@ namespace BanjoBotCore
 
             handler?.Invoke(this, args);
         }
+
         protected async Task OnPlayerRegistrationAccepted(Player player)
         {
             EventHandler<RegistrationEventArgs> handler = PlayerRegistrationAccepted;
@@ -199,10 +194,10 @@ namespace BanjoBotCore
             SeasonEventArgs args = new SeasonEventArgs();
             args.League = league;
             args.Season = season;
-            
+
             handler?.Invoke(this, args);
         }
-    }   
+    }
 
     public class LeagueEventArgs : EventArgs
     {
@@ -222,7 +217,6 @@ namespace BanjoBotCore
     [Serializable]
     public class InsufficientPermissionException : Exception
     {
-
         public InsufficientPermissionException(string message) : base(message)
         {
         }
@@ -232,7 +226,6 @@ namespace BanjoBotCore
     {
         public LeagueException(string message) : base(message)
         {
-
         }
     }
 }

@@ -13,12 +13,11 @@ namespace BanjoBotCore.Controller
     public class CommandController : ILeagueEventListener
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
-        
-        private const string RULE_URL = "https://docs.google.com/document/d/1ibvVJ1o7CSuPl8AfdEJN4j--2ivC93XOKulVq28M_BE";
+
         private const string STEAM_PROFILE_URL = "https://steamcommunity.com/profiles/";
-        private Dictionary<ulong, IUserMessage> _signups = new Dictionary<ulong, IUserMessage>();
-        private LeagueCoordinator _leagueCoordinator = LeagueCoordinator.Instance;
-        private DiscordMessageDispatcher msgDispatcher;
+        private readonly Dictionary<ulong, IUserMessage> _signups = new Dictionary<ulong, IUserMessage>();
+        private readonly LeagueCoordinator _leagueCoordinator = LeagueCoordinator.Instance;
+        private readonly DiscordMessageDispatcher msgDispatcher;
 
         public CommandController(DiscordMessageDispatcher msgDispatcher)
         {
@@ -31,13 +30,12 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
             try
             {
-                await lc.LobbyController.HostLobby(player,lc.League);
+                await lc.LobbyController.HostLobby(player, lc.League);
             }
-            catch(LeagueException e)
+            catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
-            }           
+            }
         }
 
         public async Task JoinLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -51,7 +49,6 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
@@ -66,7 +63,6 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
@@ -82,7 +78,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(playerToKick.Id);
             if (player == null)
             {
-                await SendMessage(channel,"player not found");
+                await SendMessage(channel, "player not found");
                 return;
             }
 
@@ -93,7 +89,6 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
@@ -109,10 +104,7 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
-
-            await SendMessage(channel, "Game canceled by " + player.Name + ".");
         }
 
         public async Task VoteCancel(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -126,7 +118,6 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
@@ -142,14 +133,12 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
+
         public async Task VoteDraw(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
         {
-            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
-            Player player = lc.League.GetPlayerByDiscordID(user.Id);
-            await VoteMatchResult(channel, socketGuildChannel, user,Teams.Draw);
+            await VoteMatchResult(channel, socketGuildChannel, user, Teams.Draw);
         }
 
         public async Task VoteWin(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
@@ -161,6 +150,7 @@ namespace BanjoBotCore.Controller
                 await SendMessage(channel, "You are not ingame");
                 return;
             }
+
             Teams winner = player.CurrentGame.Match.GetTeam(Teams.Blue).Contains(player) ? Teams.Blue : Teams.Red;
             await VoteMatchResult(channel, socketGuildChannel, user, winner);
         }
@@ -189,30 +179,26 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
-        public async Task CloseLobbyByModerator(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int matchID, Teams team)
+        public async Task CloseLobbyByModerator(SocketGuildChannel socketGuildChannel, int matchID, Teams team)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             if (lc == null)
             {
-                await SendMessage(channel, "This is no league channel.");
+                await SendMessage(socketGuildChannel as IMessageChannel, "This is no league channel.");
                 return;
             }
-           
-            Player player = lc.League.GetPlayerByDiscordID(user.Id);
+
             try
             {
                 await lc.LobbyController.EndMatch(matchID, team);
             }
             catch (LeagueException e)
             {
-                await SendMessage(channel, e.Message);
-                return;
+                await SendMessage(socketGuildChannel as IMessageChannel, e.Message);
             }
-
         }
 
         public async Task ListMatches(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
@@ -220,7 +206,7 @@ namespace BanjoBotCore.Controller
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
 
             if (lc.LobbyController.LobbyExists)
-                await SendTempMessage(channel, $"Open lobby: ({lc.LobbyController.OpenLobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+                await SendTempMessage(channel, $"Open lobby: ({lc.LobbyController.OpenLobby.WaitingList.Count}/{Lobby.MAXPLAYERS})");
             else
                 await SendTempMessage(channel, "No games in lobby.");
 
@@ -229,25 +215,28 @@ namespace BanjoBotCore.Controller
                 String message = "Games in progress: ";
                 foreach (var game in lc.LobbyController.StartedLobbies)
                 {
-                    message += "#" + game.MatchID;
+                    message += $"#{game.MatchID}";
                 }
+
                 await SendTempMessage(channel, message);
             }
             else
+            {
                 await SendTempMessage(channel, "No games in progress.");
+            }
         }
 
         public async Task ShowLobby(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
-           
+
             if (!lc.LobbyController.LobbyExists)
             {
                 await SendTempMessage(channel, "No games open. Type !hostgame to create a game.");
                 return;
             }
 
-            String message = $"Lobby ({lc.LobbyController.OpenLobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})  players: \n";
+            String message = $"Lobby ({lc.LobbyController.OpenLobby.WaitingList.Count}/{Lobby.MAXPLAYERS})  players: \n";
             foreach (Player p in lc.LobbyController.OpenLobby.WaitingList)
             {
                 message += p.PlayerMMRString(lc.League.LeagueID, lc.League.Season) + " ";
@@ -274,10 +263,15 @@ namespace BanjoBotCore.Controller
             int losses = stats.Losses;
             int gamesPlayed = wins + losses;
             await SendTempMessage(channel, player.PlayerMMRString(lc.League.LeagueID, season) + " has " + gamesPlayed + " games played, " + wins + " wins, " + losses + " losses.\nCurrent win streak: " + stats.Streak + ".");
-
         }
 
-        public async Task ShowPlayerProfile(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int season)
+        public async Task ShowPlayerProfile(SocketGuildChannel socketGuildChannel, SocketUser user)
+        {
+            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
+            await ShowPlayerProfile(socketGuildChannel, user, lc.League.Season);
+        }
+
+        public async Task ShowPlayerProfile(SocketGuildChannel socketGuildChannel, SocketUser user, int season)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
@@ -326,7 +320,7 @@ namespace BanjoBotCore.Controller
             PlayerStats playerStats = player.GetLeagueStats(lc.League.LeagueID, season);
 
             int statCount = statsRecorded;
-          
+
             // prevents null division
             if (statsRecorded == 0)
                 statsRecorded = 1;
@@ -359,7 +353,7 @@ namespace BanjoBotCore.Controller
             await SendPrivateMessage(player.User as IGuildUser, message);
         }
 
-        public async Task GetMatchHistory(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int season)
+        public async Task GetMatchHistory(SocketGuildChannel socketGuildChannel, SocketUser user, int season)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             Player player = lc.League.GetPlayerByDiscordID(user.Id);
@@ -383,20 +377,12 @@ namespace BanjoBotCore.Controller
             {
                 await SendPrivateMessage(player.User as IGuildUser, "```" + s + "```");
             }
-
-
         }
 
-        public async Task GetMatchHistory(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
+        public async Task GetMatchHistory(SocketGuildChannel socketGuildChannel, SocketUser user)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
-            await GetMatchHistory(channel, socketGuildChannel, user, lc.League.Season);
-        }
-
-        public async Task ShowPlayerProfile(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user)
-        {
-            LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
-            await ShowPlayerProfile(channel, socketGuildChannel, user, lc.League.Season);
+            await GetMatchHistory(socketGuildChannel, user, lc.League.Season);
         }
 
         public async Task ShowTopMMR(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, int pSeason)
@@ -423,9 +409,9 @@ namespace BanjoBotCore.Controller
                     message += "#" + (i + 1) + " " + p.PlayerMMRString(lc.League.LeagueID, season) + "\n";
                     i++;
                 }
-
             }
-            if (!inTopTen) { 
+            if (!inTopTen)
+            {
                 message += "-------------------------------------------------\n";
                 int rank = leaderboard.IndexOf(player) + 1;
                 message += "#" + rank + " " + player.PlayerMMRString(lc.League.LeagueID, season) + "\n";
@@ -455,7 +441,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetPlayerByDiscordID(playerToRemove.Id);
             if (lc == null)
             {
-                await SendMessage(channel,"This is no league channel.");
+                await SendMessage(channel, "This is no league channel.");
                 return;
             }
 
@@ -469,6 +455,7 @@ namespace BanjoBotCore.Controller
                 return;
             }
         }
+
         public async Task RegisterPlayer(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketUser user, ulong steamID)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
@@ -485,7 +472,6 @@ namespace BanjoBotCore.Controller
                 await SendMessage(channel, "You are already registered");
                 return;
             }
-
 
             player = lc.League.GetApplicantByDiscordID(user.Id);
             if (player != null)
@@ -524,11 +510,11 @@ namespace BanjoBotCore.Controller
 
             log.Debug("Registrationdata of " + user.Username + " is valid");
             player = _leagueCoordinator.GetPlayerByDiscordID(user.Id);
-         
+
             try
             {
                 if (player == null)
-                    player= await lc.RegisterPlayer((SocketGuildUser)user, steamID);
+                    player = await lc.RegisterPlayer((SocketGuildUser)user, steamID);
                 else
                     await lc.RegisterPlayer(player);
             }
@@ -538,8 +524,6 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-
-        
             await AddDiscordRole(player, lc.League.DiscordInformation.LeagueRole);
         }
 
@@ -555,7 +539,7 @@ namespace BanjoBotCore.Controller
             Player player = lc.League.GetApplicantByDiscordID(guildUser.Id);
             if (player == null)
             {
-                await SendMessage(channel,"applicant not found");
+                await SendMessage(channel, "applicant not found");
                 return;
             }
 
@@ -572,37 +556,35 @@ namespace BanjoBotCore.Controller
             await SendMessage(channel, player.User.Mention + "You got a private message!");
         }
 
-        public async Task DeclineApplicant(IMessageChannel channel, SocketGuildChannel socketGuildChannel, IGuildUser guildUser,String reasoning)
+        public async Task DeclineApplicant(IMessageChannel channel, SocketGuildChannel socketGuildChannel, IGuildUser guildUser, String reasoning)
         {
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             if (lc == null)
             {
-                await SendMessage(channel,"This is no league channel.");
+                await SendMessage(channel, "This is no league channel.");
                 return;
             }
 
             if (guildUser == null)
             {
-                await SendMessage(channel,"usage: !decline @player [reason] [#channel] ");
+                await SendMessage(channel, "usage: !decline @player [reason] [#channel] ");
                 return;
             }
 
-            Player player = null;
-            player = lc.League.GetApplicantByDiscordID(guildUser.Id);
+            Player player = lc.League.GetApplicantByDiscordID(guildUser.Id);
             if (player == null)
             {
-                await SendMessage(channel,"applicant not found");
+                await SendMessage(channel, "applicant not found");
                 return;
             }
 
             await lc.RemovePlayerFromLeague(player);
 
-            await SendMessage(channel,player.User.Mention + "You got a private message!");
-            if (!reasoning.Equals(""))
+            await SendMessage(channel, player.User.Mention + "You got a private message!");
+            if (!string.IsNullOrEmpty(reasoning))
                 await SendPrivateMessage(guildUser, "Your registration for " + lc.League.Name + " got declined.\n Reason: " + reasoning + "\nTry again or contact a moderator");
             else
-                await SendPrivateMessage(guildUser,"Your registration for " + lc.League.Name + " got declined.\nTry again or contact a moderator");
-           
+                await SendPrivateMessage(guildUser, "Your registration for " + lc.League.Name + " got declined.\nTry again or contact a moderator");
         }
 
         public async Task StartNewSeason(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
@@ -614,16 +596,6 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-            IMessageChannel repsondChannel;
-            if (lc.League.DiscordInformation.Channel != null)
-            {
-                repsondChannel = (IMessageChannel)lc.League.DiscordInformation.Channel;
-            }
-            else
-            {
-                repsondChannel = (IMessageChannel)socketGuildChannel;
-            }
-            
             try
             {
                 await lc.StartNewSeason();
@@ -631,11 +603,10 @@ namespace BanjoBotCore.Controller
             catch (LeagueException e)
             {
                 await SendMessage(channel, e.Message);
-                return;
             }
         }
 
-        public async Task ListLeagues(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
+        public async Task ListLeagues(SocketGuildChannel channel)
         {
             object[] args = new object[] {"ID", "Name",
                     "Channel", "Role", "AutoAccept", "Steam",
@@ -654,10 +625,10 @@ namespace BanjoBotCore.Controller
                     lc.League.Applicants.Count, modrole};
                 s += String.Format("{0,-4} {1,-10} {2,-10} {3,-12} {4,-10} {5,-8} {6,-8} {7,-8} {8,-8} {9,-8} {10,-10}\n", args);
             }
-            await SendMessage(channel, "```" + s + "```");
+            await SendMessage(channel as IMessageChannel, "```" + s + "```");
         }
 
-        public async Task ListApplicants(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
+        public async Task ListApplicants(SocketGuildChannel channel)
         {
             object[] args = new object[] { "DiscordID", "Name", "SteamID", "Steam Profile", "League" };
             String s = String.Format(
@@ -669,11 +640,11 @@ namespace BanjoBotCore.Controller
                     string name = leagueApplicant.User != null ? leagueApplicant.Name : "unknown";
                     name = name.Length > 13 ? name.Substring(0, 12) : name;
                     args = new object[] { leagueApplicant.discordID, name, leagueApplicant.SteamID, STEAM_PROFILE_URL + leagueApplicant.SteamID, lc.League.Name };
-                    String next =  String.Format("{0,-24} {1,-12} {2,-24} {3,-64} {4,-24}\n", args);
-                    
+                    String next = String.Format("{0,-24} {1,-12} {2,-24} {3,-64} {4,-24}\n", args);
+
                     if (s.Length + next.Length > 2000)
                     {
-                        await SendMessage(channel, "```" + s + "```");
+                        await SendMessage(channel as IMessageChannel, "```" + s + "```");
                         s = next;
                     }
                     else
@@ -683,8 +654,8 @@ namespace BanjoBotCore.Controller
                 }
             }
 
-            if(s.Length >0)
-                await SendMessage(channel, "```" + s + "```");
+            if (s.Length > 0)
+                await SendMessage(channel as IMessageChannel, "```" + s + "```");
         }
 
         public async Task ListPlayers(IMessageChannel channel, SocketGuildChannel socketGuildChannel)
@@ -692,14 +663,13 @@ namespace BanjoBotCore.Controller
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             if (lc == null)
             {
-                await SendMessage(channel,"League not found");
+                await SendMessage(channel, "League not found");
                 return;
             }
 
             object[] args = new object[] { "DiscordID", "Name", "SteamID", "Matches", "M+D", "Wins", "Losses", "Rating" };
             String s = String.Format(
                 "{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-8} {6,-8} {7,-8}\n", args);
-
 
             foreach (var player in lc.League.GetLeaderBoard())
             {
@@ -713,7 +683,7 @@ namespace BanjoBotCore.Controller
                 };
 
                 String next = String.Format("{0,-24} {1,-14} {2,-24} {3,-8} {4,-8} {5,-8} {6,-8}{7,-8}\n", args);
-                
+
                 if (s.Length + next.Length > 2000)
                 {
                     await SendMessage(channel, "```" + s + "```");
@@ -725,8 +695,8 @@ namespace BanjoBotCore.Controller
                 }
             }
 
-            if(s.Length > 0)
-                await SendMessage(channel,"```" + s + "```");
+            if (s.Length > 0)
+                await SendMessage(channel, "```" + s + "```");
         }
 
         public async Task SetModChannel(IMessageChannel channel, SocketGuildChannel socketGuildChannel, IChannel modChannel)
@@ -764,7 +734,7 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-            await lc.SetSteamRegister(steamRegister);       
+            await lc.SetSteamRegister(steamRegister);
         }
 
         public async Task CreateLeague(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketGuild guild, string name)
@@ -778,8 +748,6 @@ namespace BanjoBotCore.Controller
 
             DiscordInformation discordInfo = new DiscordInformation(guild.Id, guild, socketGuildChannel.Id);
             await _leagueCoordinator.CreateLeague(name, discordInfo);
-            await lc.RegisterEventListener(this);
-
             await SendMessage(channel, "League created.");
         }
 
@@ -788,17 +756,16 @@ namespace BanjoBotCore.Controller
             LeagueController lc = _leagueCoordinator.GetLeagueController(socketGuildChannel);
             if (lc == null)
             {
-                await SendMessage(channel,"This channel is not assigned to league.");
+                await SendMessage(channel, "This channel is not assigned to league.");
                 return;
             }
 
             await _leagueCoordinator.DeleteLeague(lc);
-            await SendMessage(channel,"League deleted.");
+            await SendMessage(channel, "League deleted.");
         }
 
         public async Task SetChannel(IMessageChannel channel, SocketGuildChannel socketGuildChannel, SocketGuildChannel oldChannel)
         {
-
             LeagueController lc = _leagueCoordinator.GetLeagueController(oldChannel);
             if (lc == null)
             {
@@ -807,7 +774,7 @@ namespace BanjoBotCore.Controller
             }
 
             await lc.SetChannel(socketGuildChannel);
-            await SendMessage(channel,"League updated.");
+            await SendMessage(channel, "League updated.");
         }
 
         public async Task SetLeagueRole(IMessageChannel channel, SocketGuildChannel socketGuildChannel, IRole role = null)
@@ -823,14 +790,13 @@ namespace BanjoBotCore.Controller
 
             if (role == null)
             {
-                await SendMessage(channel,"League role deleted.");
+                await SendMessage(channel, "League role deleted.");
             }
             else
             {
                 await SendMessage(channel, "League role assigned. New Role: " + role.Name);
             }
 
-            
             // Assign new role to players
             foreach (var player in lc.League.RegisteredPlayers)
             {
@@ -842,7 +808,6 @@ namespace BanjoBotCore.Controller
                 {
                     await AddDiscordRole(player, role);
                 }
-
             }
         }
 
@@ -855,7 +820,7 @@ namespace BanjoBotCore.Controller
                 return;
             }
 
-            await lc.SetModRole((SocketRole) role);
+            await lc.SetModRole((SocketRole)role);
             if (role == null)
             {
                 await SendMessage(channel, "Mod role deleted.");
@@ -866,10 +831,9 @@ namespace BanjoBotCore.Controller
             }
         }
 
-        private async Task printGameResult(Match matchResult, IMessageChannel textChannel)
+        private async Task PrintGameResult(Match matchResult, IMessageChannel textChannel)
         {
             string message = "Closing lobby\n";
-            //TODO: +-24
 
             switch (matchResult.Winner)
             {
@@ -877,24 +841,25 @@ namespace BanjoBotCore.Controller
                     message += "Red team has won BBL#" + matchResult.MatchID + "!\n";
                     message += await GetGameResultString(matchResult);
                     break;
+
                 case Teams.Blue:
                     message += "Blue team has won BBL#" + matchResult.MatchID + "!\n";
                     message += await GetGameResultString(matchResult);
 
                     break;
+
                 case Teams.Draw:
                     message += "Game BBL#" + matchResult.MatchID + " has ended in a draw. No stats have been recorded.";
                     break;
             }
 
             await SendMessage(textChannel, message);
-
         }
 
-        private async Task<String> GetGameResultString(Match matchResult)
+        private async Task<String> GetGameResultString(Match match)
         {
-            Teams winner = matchResult.Winner;
-            League league = matchResult.League;
+            Teams winner = match.Winner;
+            League league = match.League;
 
             char blueSign = '+';
             char redSign = '+';
@@ -903,31 +868,30 @@ namespace BanjoBotCore.Controller
             else
                 blueSign = '-';
 
-            int mmrAdjustment = Math.Abs(matchResult.PlayerMatchStats.First().MmrAdjustment);
+            int mmrAdjustment = Math.Abs(match.PlayerMatchStats[0].MmrAdjustment);
 
             String message = "";
-            message += "Blue team ("+ blueSign + mmrAdjustment + "): ";
-            foreach (var stats in matchResult.PlayerMatchStats)
+            message += "Blue team (" + blueSign + mmrAdjustment + "): ";
+            foreach (var stats in match.PlayerMatchStats)
             {
                 if (stats.Team == Teams.Blue)
                 {
                     Player player = stats.Player;
                     if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + (2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1)) + " ";
                     else
                         message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
-
                 }
             }
             message += "\n";
             message += "Red team (" + redSign + mmrAdjustment + "): ";
-            foreach (var stats in matchResult.PlayerMatchStats)
+            foreach (var stats in match.PlayerMatchStats)
             {
                 if (stats.Team == Teams.Red)
                 {
                     Player player = stats.Player;
                     if (player.GetLeagueStats(league.LeagueID, league.Season).Streak > 1)
-                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + 2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1) + " ";
+                        message += player.PlayerMMRString(league.LeagueID, league.Season) + "+" + (2 * (player.GetLeagueStats(league.LeagueID, league.Season).Streak - 1)) + " ";
                     else
                         message += player.PlayerMMRString(league.LeagueID, league.Season) + " ";
                 }
@@ -967,7 +931,8 @@ namespace BanjoBotCore.Controller
         {
             IUserMessage discordMessage = await textChannel.SendMessageAsync(message);
 
-            System.Threading.ThreadPool.QueueUserWorkItem(delegate {
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
                 DeleteMessage(discordMessage);
             }, null);
         }
@@ -999,33 +964,32 @@ namespace BanjoBotCore.Controller
 
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             Player host = e.Lobby.Host;
-            await SendMessage(channel, $"New Lobby created by {host.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)}. \nType !join to join the game. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            await SendMessage(channel, $"New Lobby created by {host.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)}. \nType !join to join the game. ({e.Lobby.WaitingList.Count}/{Lobby.MAXPLAYERS})");
         }
 
         public async void PlayerJoined(object sender, LobbyPlayerEventArgs e)
         {
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has joined the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has joined the lobby. ({e.Lobby.WaitingList.Count}/{Lobby.MAXPLAYERS})");
             await SendPrivateMessage(e.Player.User as IGuildUser, "Password for the Dota 2 lobby: " + e.Lobby.Password);
         }
 
         public async void PlayerLeft(object sender, LobbyPlayerEventArgs e)
         {
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has left the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            await SendMessage(channel, $"{e.Player.PlayerMMRString(e.Lobby.League.LeagueID, e.Lobby.League.Season)} has left the lobby. ({e.Lobby.WaitingList.Count}/{Lobby.MAXPLAYERS})");
         }
 
         public async void PlayerKicked(object sender, LobbyPlayerEventArgs e)
         {
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, $"{ e.Player.User.Mention} got kicked from the lobby. ({e.Lobby.WaitingList.Count()}/{Lobby.MAXPLAYERS})");
+            await SendMessage(channel, $"{ e.Player.User.Mention} got kicked from the lobby. ({e.Lobby.WaitingList.Count}/{Lobby.MAXPLAYERS})");
         }
 
         public async void PlayerVotedCancel(object sender, LobbyPlayerEventArgs e)
         {
-
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
-            await SendMessage(channel, "Vote recorded to cancel game by " + e.Player.Name + " (" + e.Lobby.CancelCalls.Count() + "/" + e.Lobby.GetCancelThreshold() + ")");
+            await SendMessage(channel, "Vote recorded to cancel game by " + e.Player.Name + " (" + e.Lobby.CancelCalls.Count + "/" + e.Lobby.GetCancelThreshold() + ")");
         }
 
         public async void LobbyCanceled(object sender, LobbyPlayerEventArgs e)
@@ -1033,7 +997,6 @@ namespace BanjoBotCore.Controller
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             await SendMessage(channel, "Lobby got canceled canceled");
         }
-   
 
         public async void LobbyFull(object sender, LobbyEventArgs e)
         {
@@ -1064,28 +1027,27 @@ namespace BanjoBotCore.Controller
             e.Lobby.StartMessage = await SendMessageImmediate(channel, startmessage + "\n" + blueTeam + "\n" + redTeam);
             await e.Lobby.StartMessage.PinAsync();
         }
-       
+
         public async void PlayerVoted(object sender, LobbyVoteEventArgs e)
         {
             SocketTextChannel channel = e.Lobby.League.DiscordInformation.Channel as SocketTextChannel;
             String message = "";
-            if(e.prevVote != Teams.None)
+            if (e.prevVote != Teams.None)
             {
                 message += e.Player.Name + " has changed his Mind\n";
             }
 
             if (e.Team == Teams.Red)
             {
-                message += $"Vote recorded for team Red in game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.RedWinCalls.Count()}/{Lobby.VOTETHRESHOLD})";
+                message += $"Vote recorded for team Red in game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.RedWinCalls.Count}/{Lobby.VOTETHRESHOLD})";
             }
             else if (e.Team == Teams.Blue)
             {
-
-                message += $"Vote recorded for team Blue in game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.BlueWinCalls.Count()}/{Lobby.VOTETHRESHOLD})";
+                message += $"Vote recorded for team Blue in game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.BlueWinCalls.Count}/{Lobby.VOTETHRESHOLD})";
             }
             else
             {
-                message += $"Draw vote recorded for game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.DrawCalls.Count()}/{Lobby.VOTETHRESHOLD})";
+                message += $"Draw vote recorded for game #{e.Lobby.MatchID} by {e.Player.Name }. ({e.Lobby.DrawCalls.Count}/{Lobby.VOTETHRESHOLD})";
             }
 
             await SendMessage(channel, message);
@@ -1097,20 +1059,20 @@ namespace BanjoBotCore.Controller
                 return;
 
             IMessageChannel channel = e.Match.League.DiscordInformation.Channel as IMessageChannel;
-            await printGameResult(e.Match, channel);
+            await PrintGameResult(e.Match, channel);
         }
 
         public async void PlayerRegistered(object sender, RegistrationEventArgs e)
         {
             if (e == null)
                 return;
-            
-            await SendPrivateMessage(e.Player.User,"You sucessfully registered for" + e.League.Name + ". Wait for the approval by a moderator");
+
+            await SendPrivateMessage(e.Player.User, "You sucessfully registered for" + e.League.Name + ". Wait for the approval by a moderator");
 
             SocketGuildChannel modChannel = e.League.DiscordInformation.ModeratorChannel;
             if (modChannel != null)
             {
-                IUserMessage message = await SendMessageImmediate((IMessageChannel)modChannel, "New applicant: " + e.Player.User.Mention + 
+                IUserMessage message = await SendMessageImmediate((IMessageChannel)modChannel, "New applicant: " + e.Player.User.Mention +
                     "\t" + STEAM_PROFILE_URL + e.Player.SteamID + "\tLeague: " + e.League.Name);
                 _signups.Add(e.Player.User.Id, message);
                 await message.PinAsync();
@@ -1121,16 +1083,15 @@ namespace BanjoBotCore.Controller
         {
             await SendPrivateMessage(e.Player.User, "Your registration for " + e.League.Name + " got approved.\nYou can now start playing!" +
                 "\n\n If you need help, ask a moderator or use !help \n\n Note: Please make sure you read the rules, you can find them in the channel #rules\n");
-            IUserMessage message;
-            
-            _signups.TryGetValue(e.Player.User.Id, out message);
+
+            _signups.TryGetValue(e.Player.User.Id, out IUserMessage message);
             await message?.UnpinAsync();
             _signups.Remove(e.Player.User.Id);
         }
 
         public async void SeasonEnded(object sender, SeasonEventArgs e)
         {
-            String message = "";
+            String message;
             List<Player> players = e.League.GetLeaderBoard(e.Season);
             Player mostActive = null;
             int max = Int32.MinValue;
@@ -1153,7 +1114,7 @@ namespace BanjoBotCore.Controller
                 mention = e.League.DiscordInformation.LeagueRole.Mention + " ";
             await SendMessage(e.League.DiscordInformation.Channel as IMessageChannel, mention + message);
 
-            object[] args = new object[] {"Rank", "Name", "MMR", "Matches", "Wins", "Losses" };
+            object[] args = new object[] { "Rank", "Name", "MMR", "Matches", "Wins", "Losses" };
             String leaderboard = String.Format("{0,-7} {1,-30} {2,-10} {3,-10} {4,-10} {5,-10}\n", args);
             int rank = 0;
             foreach (Player player in players)
@@ -1162,7 +1123,7 @@ namespace BanjoBotCore.Controller
                 PlayerStats stats = player.GetLeagueStats(e.League.LeagueID, e.Season);
                 string name = player.User != null ? player.Name : "unknown";
                 name = name.Length > 19 ? name.Substring(0, 19) : name;
-                args = new object[] {rank, name, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
+                args = new object[] { rank, name, stats.MMR, stats.MatchCount, stats.Wins, stats.Losses };
                 String nextLine = String.Format("#{0,-6} {1,-30} {2,-10} {3,-10} {4,-10} {5,-10}\n", args);
 
                 if (leaderboard.Length + nextLine.Length > 2000)
@@ -1174,7 +1135,7 @@ namespace BanjoBotCore.Controller
                 leaderboard += nextLine;
             }
 
-            if(leaderboard.Length > 0)
+            if (leaderboard.Length > 0)
             {
                 await SendMessage(e.League.DiscordInformation.Channel as IMessageChannel, "```" + leaderboard + "```");
             }

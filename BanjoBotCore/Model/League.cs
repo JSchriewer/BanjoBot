@@ -1,9 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Discord;
-using Discord.API;
-using Discord.API.Gateway;
-using Discord.WebSocket;
 
 namespace BanjoBotCore.Model
 {
@@ -18,7 +14,8 @@ namespace BanjoBotCore.Model
         public int Season { get; set; }
         public int GameCounter { get; set; }
 
-        public League(int id, string name ,int season, int gameCounter = 0) {
+        public League(int id, string name, int season, int gameCounter = 0)
+        {
             LeagueID = id;
             Name = name;
             Season = season;
@@ -32,17 +29,19 @@ namespace BanjoBotCore.Model
         {
             foreach (Player player in RegisteredPlayers)
             {
-                if (player.discordID == id) {
+                if (player.discordID == id)
+                {
                     return player;
                 }
             }
-            
+
             return null;
         }
 
-
-        public Player GetApplicantByDiscordID(ulong id) {
-            foreach (Player player in Applicants) {
+        public Player GetApplicantByDiscordID(ulong id)
+        {
+            foreach (Player player in Applicants)
+            {
                 if (player.discordID == id)
                     return player;
             }
@@ -59,13 +58,14 @@ namespace BanjoBotCore.Model
             return (List<Player>)RegisteredPlayers.OrderBy(player => player.GetLeagueStats(LeagueID, season).MMR).Reverse().ToList();
         }
 
-        public bool HasDiscord() {
+        public bool HasDiscord()
+        {
             if (DiscordInformation != null && DiscordInformation.DiscordServer != null)
             {
                 return true;
             }
 
             return false;
-        }        
+        }
     }
 }

@@ -2,15 +2,11 @@ using Discord;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BanjoBotCore.Model
-{ 
-
+{
     public class Lobby
     {
-
 #if RELEASE
         public const int MAXPLAYERS = 8;
         public const int VOTETHRESHOLD = 5;
@@ -30,20 +26,17 @@ namespace BanjoBotCore.Model
         public bool HasStarted { get; set; }
         public bool IsClosed { get; set; } = false;
         public Match Match { get; set; }
-        public String Password { get;}
+        public String Password { get; }
         public IUserMessage StartMessage { get; set; }
         public int LeagueID { get; set; }
         public ulong HostID { get; set; }
         public int MatchID { get; set; }
         public ulong StartMessageID { get; set; }
 
-
-
         public Lobby(Player host, League league) : this(league)
         {
             Host = host;
             WaitingList.Add(host);
-        
         }
 
         //Database Constructor
@@ -75,7 +68,6 @@ namespace BanjoBotCore.Model
             Password = GeneratePassword(6);
         }
 
-
         public Player GetPlayerBySteamID(ulong steamID)
         {
             foreach (var player in WaitingList)
@@ -105,7 +97,6 @@ namespace BanjoBotCore.Model
 
             return true;
         }
-
 
         /// <summary>
         /// Removes User from game.

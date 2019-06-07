@@ -1,9 +1,7 @@
 ﻿using BanjoBotCore.Model;
-using Discord;
 using log4net;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BanjoBotCore.Controller
@@ -13,21 +11,31 @@ namespace BanjoBotCore.Controller
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
 
         private event EventHandler<LobbyEventArgs> LobbyClosed;
+
         private event EventHandler<LobbyEventArgs> LobbyFull;
+
         private event EventHandler<LobbyEventArgs> LobbyStarted;
+
         private event EventHandler<LobbyPlayerEventArgs> LobbyCanceled;
+
         private event EventHandler<LobbyPlayerEventArgs> LobbyHosted;
+
         private event EventHandler<LobbyPlayerEventArgs> PlayerKicked;
+
         private event EventHandler<LobbyPlayerEventArgs> PlayerJoined;
+
         private event EventHandler<LobbyPlayerEventArgs> PlayerLeft;
+
         private event EventHandler<LobbyPlayerEventArgs> PlayerVotedCancel;
+
         private event EventHandler<LobbyVoteEventArgs> PlayerVoted;
+
         private event EventHandler<MatchEventArgs> MatchEnded;
 
         public List<Lobby> StartedLobbies { get; }
         public Lobby OpenLobby { get; set; }
 
-        private DatabaseController _database;
+        private readonly DatabaseController _database;
 
         public LobbyController()
         {
@@ -59,7 +67,6 @@ namespace BanjoBotCore.Controller
         {
             if (OpenLobby.WaitingList.Count >= Lobby.MAXPLAYERS)
                 await OnLobbyFull(OpenLobby);
-
         }
 
         private async Task CancelLobby(Player player = null)
@@ -70,7 +77,7 @@ namespace BanjoBotCore.Controller
             {
                 p.CurrentGame = null;
             }
-            
+
             await OnLobbyCanceled(OpenLobby, player);
             OpenLobby = null;
         }
@@ -104,7 +111,7 @@ namespace BanjoBotCore.Controller
                 await match.SetMatchResult(winnerTeam, mmrAdjustment);
                 await AdjustPlayerStats(match, mmrAdjustment);
             }
-            
+
             try
             {
                 await _database.UpdateMatch(match);
@@ -130,7 +137,6 @@ namespace BanjoBotCore.Controller
             {
                 player.AdjustStats(match.League, true, mmrAdjustment);
                 await _database.UpdatePlayerStats(player, player.GetLeagueStats(match.LeagueID, match.Season));
-            
             }
 
             foreach (var player in match.GetLoserTeam())
@@ -151,7 +157,6 @@ namespace BanjoBotCore.Controller
 
             if (OpenLobby.WaitingList.Count < Lobby.MAXPLAYERS)
                 throw new LeagueException(player.User.Mention + " you need 8 players to start the game.");
-
 
             // If the game sucessfully started
             foreach (Player p in OpenLobby.WaitingList)
@@ -198,7 +203,7 @@ namespace BanjoBotCore.Controller
         {
             if (!LobbyExists)
                 throw new LeagueException("No games open. Type !hostgame to create a game.");
-            
+
             await CancelLobby(player);
         }
 
@@ -268,7 +273,6 @@ namespace BanjoBotCore.Controller
             await OnPlayerLeft(OpenLobby, player);
             player.CurrentGame = null;
 
-
             // If game now empty
             if (removePlayerResult == false)
             {
@@ -285,7 +289,6 @@ namespace BanjoBotCore.Controller
             // If no games are open.
             if (!LobbyExists)
                 throw new LeagueException("No games open.");
-
 
             // Attempt to remove player
             bool? removePlayerResult = OpenLobby.RemovePlayer(player);
@@ -306,8 +309,6 @@ namespace BanjoBotCore.Controller
             {
                 await _database.UpdateLobby(OpenLobby);
             }
-
-
         }
 
         public async Task EndMatch(int matchID, Teams team)
@@ -343,7 +344,6 @@ namespace BanjoBotCore.Controller
                 else
                 {
                     lobby.BlueWinCalls.Remove(player);
-
                 }
             }
             else if (lobby.RedWinCalls.Contains(player))
@@ -374,9 +374,11 @@ namespace BanjoBotCore.Controller
                 case Teams.Red:
                     lobby.RedWinCalls.Add(player);
                     break;
+
                 case Teams.Blue:
                     lobby.BlueWinCalls.Add(player);
                     break;
+
                 case Teams.Draw:
                     lobby.DrawCalls.Add(player);
                     break;
@@ -432,7 +434,7 @@ namespace BanjoBotCore.Controller
             {
                 foreach (var player in startedGame.WaitingList)
                 {
-                    if (player!= playerToRemove && !OpenLobby.WaitingList.Contains(player))
+                    if (player != playerToRemove && !OpenLobby.WaitingList.Contains(player))
                         OpenLobby.AddPlayer(player);
                 }
             }
@@ -443,7 +445,6 @@ namespace BanjoBotCore.Controller
 
             await LobbyChanged();
         }
-
 
         protected async Task OnLobbyHosted(Lobby lobby, Player player)
         {
@@ -563,7 +564,6 @@ namespace BanjoBotCore.Controller
 
             handler?.Invoke(this, args);
         }
-
     }
 
     public class LobbyEventArgs : EventArgs

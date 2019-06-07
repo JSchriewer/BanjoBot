@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BanjoBotCore.Model
+﻿namespace BanjoBotCore.Model
 {
-    public class PlayerStats {
+    public class PlayerStats
+    {
         public int LeagueID { get; set; }
         public int Season { get; set; }
         public int MatchCount { get; set; }

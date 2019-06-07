@@ -1,34 +1,25 @@
-﻿using System;
+﻿using BanjoBotCore.Model;
+using log4net;
+using MySql.Data.MySqlClient;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using log4net;
-using Microsoft.Extensions.Configuration;
-using MySql.Data.MySqlClient;
-using Microsoft.Extensions.DependencyInjection;
-using BanjoBotCore.Model;
 
 namespace BanjoBotCore
 {
-    //TODO: Exception handling -> try catch in concrete methods like UpdateMatch, InsertLobby for better Error logging
-    //TODO: Query methods should not have any mode data -> DAO
-    public class DatabaseController 
+    public class DatabaseController
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(DatabaseController));
-        private string _connectionString = "server=127.0.0.1;database=banjoball;user=banjo_admin;pwd=D2bblXX;";
+        private readonly string _connectionString = "server=127.0.0.1;database=banjoball;user=banjo_admin;pwd=D2bblXX;";
 
-
-        //public DatabaseController(IServiceProvider serviceProvider) 
+        //public DatabaseController(IServiceProvider serviceProvider)
         //{
         //    IConfiguration config = serviceProvider.GetService<IConfiguration>();
-            
+
         //    _connectionString = config.GetValue<String>("DbConnectionString");
 
         //}
-        public DatabaseController()
-        {
-
-        }
 
         public async Task<int> ExecuteNoQuery(MySqlCommand command)
         {
@@ -48,7 +39,6 @@ namespace BanjoBotCore
                 log.Error("ExecuteNoQuery: " + command.CommandText);
                 log.Error(e.ToString());
                 throw new Exception("Error: Couldn't save data");
-
             }
         }
 
@@ -75,7 +65,6 @@ namespace BanjoBotCore
 
         public async Task<MySqlDataReader> ExecuteReader(MySqlCommand command)
         {
-            
             MySqlConnection connection = new MySqlConnection(_connectionString);
             command.Connection = connection;
             try
@@ -109,8 +98,7 @@ namespace BanjoBotCore
             command.Parameters.AddWithValue("@stats_recorded", match.StatsRecorded);
             await ExecuteNoQuery(command);
 
-
-            //TODO: Replace -> UpdateMatchPlayer / InserMatchPlayer() 
+            //TODO: Replace -> UpdateMatchPlayer / InserMatchPlayer()
             StringBuilder queryBuilder =
                 new StringBuilder(
                     "REPLACE INTO match_player_stats (steam_id, match_id,hero_id, goals, assist, steals, turnovers, steal_turnover_difference,pickups,passes, passes_received, save_rate, points, possession_time, time_as_goalie, win, mmr_adjustment, streak_bonus,team) VALUES ");
@@ -148,7 +136,6 @@ namespace BanjoBotCore
                 command.Parameters.AddWithValue("@mmr_adjustment" + i, match.PlayerMatchStats[i].MmrAdjustment);
                 command.Parameters.AddWithValue("@streak_bonus" + i, match.PlayerMatchStats[i].StreakBonus);
                 command.Parameters.AddWithValue("@team" + i, match.PlayerMatchStats[i].Team);
-
             }
 
             await ExecuteNoQuery(command);
@@ -157,17 +144,18 @@ namespace BanjoBotCore
         public async Task UpdateLobby(Lobby lobby)
         {
             log.Debug("Update lobby");
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText =
-                "update lobbies set match_id=@match_id,discord_message=@discord_message, has_started=@has_started, closed=@closed where lobby_id=@lobby_id";
+            MySqlCommand command = new MySqlCommand
+            {
+                CommandText = "update lobbies set match_id=@match_id,discord_message=@discord_message, has_started=@has_started, closed=@closed where lobby_id=@lobby_id"
+            };
 
             if (lobby.Match == null)
-                command.Parameters.AddWithValue("@match_id",  DBNull.Value);
+                command.Parameters.AddWithValue("@match_id", DBNull.Value);
             else
                 command.Parameters.AddWithValue("@match_id", lobby.Match.MatchID);
 
             command.Parameters.AddWithValue("@lobby_id", lobby.LobbyID);
-            if(lobby.StartMessage != null)
+            if (lobby.StartMessage != null)
                 command.Parameters.AddWithValue("@discord_message", lobby.StartMessage.Id);
             else
                 command.Parameters.AddWithValue("@discord_message", DBNull.Value);
@@ -176,18 +164,17 @@ namespace BanjoBotCore
             await ExecuteNoQuery(command);
 
             command = new MySqlCommand();
-            if(lobby.WaitingList.Count > 0) {
+            if (lobby.WaitingList.Count > 0)
+            {
                 var params1 = new string[lobby.WaitingList.Count];
                 for (int i = 0; i < lobby.WaitingList.Count; i++)
                 {
                     params1[i] = string.Format("@steam_id{0}", i);
                     command.Parameters.AddWithValue(params1[i], lobby.WaitingList[i].SteamID);
                 }
-                command.CommandText = String.Format("Delete from lobby_players where steam_id NOT IN({0})", string.Join(",",params1));
+                command.CommandText = String.Format("Delete from lobby_players where steam_id NOT IN({0})", string.Join(",", params1));
                 await ExecuteNoQuery(command);
-            
 
-                //TODO: Replace -> UpdateLobbyPlayers() / InsertLobbyPlayer() 
                 StringBuilder queryBuilder =
                     new StringBuilder(
                         "Replace into lobby_players (lobby_id, steam_id, cancel_call, red_win_call, blue_win_call, draw_call) VALUES ");
@@ -201,7 +188,6 @@ namespace BanjoBotCore
                         queryBuilder.Replace(',', ';', queryBuilder.Length - 1, 1);
                     }
                 }
-
 
                 command = new MySqlCommand(queryBuilder.ToString());
 
@@ -221,16 +207,16 @@ namespace BanjoBotCore
         public async Task UpdateLeague(League league)
         {
             log.Debug("UpdateLeague");
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText =
-                "Update leagues Set season=@season,name=@name " +
-                "Where league_id = @league_id";
+            MySqlCommand command = new MySqlCommand
+            {
+                CommandText = "Update leagues Set season=@season,name=@name Where league_id = @league_id"
+            };
             command.Parameters.AddWithValue("@league_id", league.LeagueID);
             command.Parameters.AddWithValue("@season", league.Season);
             command.Parameters.AddWithValue("@name", league.Name);
             await ExecuteNoQuery(command);
 
-            if(league.DiscordInformation == null)
+            if (league.DiscordInformation == null)
                 return;
 
             command = new MySqlCommand();
@@ -258,7 +244,6 @@ namespace BanjoBotCore
                 command.Parameters.AddWithValue("@moderator_channel", league.DiscordInformation.ModeratorChannel.Id);
 
             await ExecuteNoQuery(command);
-
         }
 
         public async Task UpdatePlayerStats(Player player, PlayerStats playerstats)
@@ -277,9 +262,8 @@ namespace BanjoBotCore
             command.Parameters.AddWithValue("@season", playerstats.Season);
 
             await ExecuteNoQuery(command);
-
         }
-        
+
         public async Task UpdatePlayer(Player player)
         {
             log.Debug("UpdatePlayer");
@@ -455,18 +439,20 @@ namespace BanjoBotCore
                         {
                             leagueID = reader.GetInt32(i);
                         }
-                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("server_id")) {
+                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("server_id"))
+                        {
                             server_id = reader.GetUInt64(i);
                         }
                         else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("channel_id"))
                         {
                             channel = reader.GetUInt64(i);
                         }
-                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("moderator_channel")) {
+                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("moderator_channel"))
+                        {
                             modChannel = reader.GetUInt64(i);
                         }
-
-                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("mod_role_id")) {
+                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("mod_role_id"))
+                        {
                             modRoleID = reader.GetUInt64(i);
                         }
                         else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("role_id"))
@@ -493,19 +479,17 @@ namespace BanjoBotCore
                         {
                             match_count = reader.GetInt32(i);
                         }
-
                     }
                     League league = new League(leagueID, name, season, match_count);
                     if (server_id != ulong.MinValue)
                     {
-                        league.DiscordInformation = new DiscordInformation(server_id, channel, modRoleID, role, modChannel,autoAccept,needSteamReg);
+                        league.DiscordInformation = new DiscordInformation(server_id, channel, modRoleID, role, modChannel, autoAccept, needSteamReg);
                     }
                     leagues.Add(league);
                 }
             }
 
             return leagues;
-
         }
 
         public async Task<List<Player>> GetPlayerBase(int leagueID)
@@ -514,17 +498,18 @@ namespace BanjoBotCore
             List<Player> result = new List<Player>();
             MySqlCommand command = new MySqlCommand();
 
-            command.CommandText = string.Format("Select * from players p " +
-                                                "inner join players_leagues pl on p.steam_id = pl.steam_id " +
-                                                "inner join player_stats ps on p.steam_id = ps.steam_id and pl.league_id=ps.league_id " +
-                                                "where pl.league_id = @leagueID " +
-                                                "AND pl.approved = 1");
+            command.CommandText = "Select * from players p " +
+                                    "inner join players_leagues pl on p.steam_id = pl.steam_id " +
+                                    "inner join player_stats ps on p.steam_id = ps.steam_id and pl.league_id=ps.league_id " +
+                                    "where pl.league_id = @leagueID " +
+                                    "AND pl.approved = 1";
 
             command.Parameters.AddWithValue("@leagueID", leagueID);
 
             using (MySqlDataReader reader = await ExecuteReader(command))
-            {      
-                while (reader.Read()) {
+            {
+                while (reader.Read())
+                {
                     ulong discordId = ulong.MinValue;
                     ulong steamId = 0;
                     int season = 0;
@@ -535,51 +520,62 @@ namespace BanjoBotCore
                     int mmr = 0;
                     int leagueId = 0;
 
-                    for (int i = 0; i < reader.FieldCount; i++) {
-                        if (!reader.IsDBNull(i) && reader.GetName(i).Equals("discord_id")) {
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        if (!reader.IsDBNull(i) && reader.GetName(i).Equals("discord_id"))
+                        {
                             discordId = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("steam_id")) {
+                        else if (reader.GetName(i).Equals("steam_id"))
+                        {
                             steamId = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("season")) {
+                        else if (reader.GetName(i).Equals("season"))
+                        {
                             season = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("streak")) {
+                        else if (reader.GetName(i).Equals("streak"))
+                        {
                             streak = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("matches")) {
+                        else if (reader.GetName(i).Equals("matches"))
+                        {
                             matches = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("wins")) {
+                        else if (reader.GetName(i).Equals("wins"))
+                        {
                             wins = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("losses")) {
+                        else if (reader.GetName(i).Equals("losses"))
+                        {
                             losses = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("mmr")) {
+                        else if (reader.GetName(i).Equals("mmr"))
+                        {
                             mmr = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("league_id")) {
+                        else if (reader.GetName(i).Equals("league_id"))
+                        {
                             leagueId = reader.GetInt32(i);
                         }
                     }
 
                     Player existingPlayer = null;
-                    foreach (var p in result) {
-                        if (p.SteamID == steamId) {
+                    foreach (var p in result)
+                    {
+                        if (p.SteamID == steamId)
+                        {
                             existingPlayer = p;
                             existingPlayer.PlayerStats.Add(new PlayerStats(leagueId, season, matches, wins, losses, mmr, streak));
                             break;
                         }
                     }
-                    if (existingPlayer == null) {
-                        Player player = new Player(discordId,steamId);
+                    if (existingPlayer == null)
+                    {
+                        Player player = new Player(discordId, steamId);
                         player.PlayerStats.Add(new PlayerStats(leagueId, season, matches, wins, losses, mmr, streak));
                         result.Add(player);
                     }
-                    
-
                 }
             }
 
@@ -600,26 +596,28 @@ namespace BanjoBotCore
 
             using (MySqlDataReader reader = await ExecuteReader(command))
             {
-                while (reader.Read()) {
+                while (reader.Read())
+                {
                     ulong discordId = 0;
                     ulong steamId = 0;
 
-                    for (int i = 0; i < reader.FieldCount; i++) {
-                        if (reader.GetName(i).Equals("discord_id")) {
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        if (reader.GetName(i).Equals("discord_id"))
+                        {
                             discordId = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("steam_id")) {
+                        else if (reader.GetName(i).Equals("steam_id"))
+                        {
                             steamId = reader.GetUInt64(i);
                         }
                     }
 
                     result.Add(new Player(discordId, steamId));
-                    
                 }
             }
             return result;
         }
-
 
         public async Task<List<Lobby>> GetLobbies(int leagueID, List<Player> players)
         {
@@ -668,7 +666,7 @@ namespace BanjoBotCore
                         {
                             steam_id_host = reader.GetUInt64(i);
                         }
-                        else if (!reader.IsDBNull(i) &&  reader.GetName(i).Equals("match_id"))
+                        else if (!reader.IsDBNull(i) && reader.GetName(i).Equals("match_id"))
                         {
                             match_id = reader.GetInt32(i);
                         }
@@ -715,24 +713,22 @@ namespace BanjoBotCore
                     }
                     if (lobby == null)
                     {
-                        lobby = new Lobby(lobby_id, league_id, steam_id_host,match_id, has_started,password, discord_message);
+                        lobby = new Lobby(lobby_id, league_id, steam_id_host, match_id, has_started, password, discord_message);
                         lobbies.Add(lobby);
                     }
                     Player player = players.Find(p => p.SteamID == steam_id);
-                    if(player != null)
+                    if (player != null)
                     {
                         lobby.WaitingList.Add(player);
-                        if(blue_win_call)
+                        if (blue_win_call)
                             lobby.BlueWinCalls.Add(player);
-                        if(red_win_call)
+                        if (red_win_call)
                             lobby.RedWinCalls.Add(player);
                         if (draw_call)
                             lobby.DrawCalls.Add(player);
                         if (cancel_call)
                             lobby.CancelCalls.Add(player);
                     }
-                        
-
                 }
             }
             return lobbies;
@@ -750,7 +746,8 @@ namespace BanjoBotCore
 
             using (MySqlDataReader reader = await ExecuteReader(command))
             {
-                while (reader.Read()) {
+                while (reader.Read())
+                {
                     int match_id = 0;
                     int duration = 0;
                     DateTime date = DateTime.MaxValue;
@@ -777,98 +774,127 @@ namespace BanjoBotCore
                     bool statsRecorded = false;
                     Teams team = 0;
 
-                    for (int i = 0; i < reader.FieldCount; i++) {
-                        if (reader.GetName(i).Equals("match_id")) {
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        if (reader.GetName(i).Equals("match_id"))
+                        {
                             match_id = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("duration")) {
+                        else if (reader.GetName(i).Equals("duration"))
+                        {
                             duration = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("date")) {
+                        else if (reader.GetName(i).Equals("date"))
+                        {
                             date = reader.GetDateTime(i);
                         }
-                        else if (reader.GetName(i).Equals("steam_match_id")) {
+                        else if (reader.GetName(i).Equals("steam_match_id"))
+                        {
                             steam_match_id = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("season")) {
+                        else if (reader.GetName(i).Equals("season"))
+                        {
                             season = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("steam_id")) {
+                        else if (reader.GetName(i).Equals("steam_id"))
+                        {
                             steam_id = reader.GetUInt64(i);
                         }
-                        else if (reader.GetName(i).Equals("hero_id")) {
+                        else if (reader.GetName(i).Equals("hero_id"))
+                        {
                             heroID = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("goals")) {
+                        else if (reader.GetName(i).Equals("goals"))
+                        {
                             goals = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("assist")) {
+                        else if (reader.GetName(i).Equals("assist"))
+                        {
                             assist = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("steals")) {
+                        else if (reader.GetName(i).Equals("steals"))
+                        {
                             steals = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("turnovers")) {
+                        else if (reader.GetName(i).Equals("turnovers"))
+                        {
                             turnovers = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("steal_turnover_difference")) {
+                        else if (reader.GetName(i).Equals("steal_turnover_difference"))
+                        {
                             steal_turnover_difference = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("pickups")) {
+                        else if (reader.GetName(i).Equals("pickups"))
+                        {
                             pickups = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("passes")) {
+                        else if (reader.GetName(i).Equals("passes"))
+                        {
                             passes = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("passes_received")) {
+                        else if (reader.GetName(i).Equals("passes_received"))
+                        {
                             passes_received = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("save_rate")) {
+                        else if (reader.GetName(i).Equals("save_rate"))
+                        {
                             save_rate = reader.GetFloat(i);
                         }
-                        else if (reader.GetName(i).Equals("points")) {
+                        else if (reader.GetName(i).Equals("points"))
+                        {
                             points = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("possession_time")) {
+                        else if (reader.GetName(i).Equals("possession_time"))
+                        {
                             possession_time = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("time_as_goalie")) {
+                        else if (reader.GetName(i).Equals("time_as_goalie"))
+                        {
                             time_as_goalie = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("win")) {
+                        else if (reader.GetName(i).Equals("win"))
+                        {
                             win = reader.GetBoolean(i);
                         }
-                        else if (reader.GetName(i).Equals("winner")) {
+                        else if (reader.GetName(i).Equals("winner"))
+                        {
                             winner = (Teams)reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("hero")) {
+                        else if (reader.GetName(i).Equals("hero"))
+                        {
                             heroID = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("stats_recorded")) {
+                        else if (reader.GetName(i).Equals("stats_recorded"))
+                        {
                             statsRecorded = reader.GetBoolean(i);
                         }
-                        else if (reader.GetName(i).Equals("mmr_adjustment")) {
+                        else if (reader.GetName(i).Equals("mmr_adjustment"))
+                        {
                             mmr_adjustment = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("streak_bonus")) {
+                        else if (reader.GetName(i).Equals("streak_bonus"))
+                        {
                             streak_bonus = reader.GetInt32(i);
                         }
-                        else if (reader.GetName(i).Equals("team")) {
+                        else if (reader.GetName(i).Equals("team"))
+                        {
                             team = (Teams)reader.GetInt32(i);
                         }
                     }
                     Match matchResult = null;
-                    foreach (var m in matches) {
-                        if (m.MatchID == match_id) {
+                    foreach (var m in matches)
+                    {
+                        if (m.MatchID == match_id)
+                        {
                             matchResult = m;
                         }
                     }
-                    if (matchResult == null) {
+                    if (matchResult == null)
+                    {
                         matchResult = new Match(match_id, leagueID, steam_match_id, season, winner, date, duration, new List<MatchPlayerStats>(), statsRecorded);
                         matches.Add(matchResult);
                     }
                     matchResult.PlayerMatchStats.Add(new MatchPlayerStats(matchResult, steam_id, heroID, goals, assist, steals, turnovers, steal_turnover_difference, pickups, passes, passes_received, save_rate, points, possession_time, time_as_goalie, mmr_adjustment, streak_bonus, team, win));
-
                 }
             }
             return matches;

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 
 namespace BanjoBotCore.Model
 {
@@ -29,7 +24,8 @@ namespace BanjoBotCore.Model
             NeedSteamToRegister = steamRegister;
         }
 
-        public DiscordInformation(ulong discordServerID, SocketGuild discordServer, ulong channelID) {
+        public DiscordInformation(ulong discordServerID, SocketGuild discordServer, ulong channelID)
+        {
             DiscordServerId = discordServerID;
             DiscordServer = discordServer;
             channel_ID = channelID;
@@ -46,7 +42,8 @@ namespace BanjoBotCore.Model
             set { channel_ID = value.Id; }
         }
 
-        public SocketGuildChannel ModeratorChannel {
+        public SocketGuildChannel ModeratorChannel
+        {
             get
             {
                 if (moderatorChannel_ID != ulong.MinValue)
@@ -56,7 +53,6 @@ namespace BanjoBotCore.Model
             }
             set { moderatorChannel_ID = value.Id; }
         }
-
 
         public SocketRole ModeratorRole
         {
@@ -78,11 +74,8 @@ namespace BanjoBotCore.Model
                     return DiscordServer.GetRole(league_role_ID);
                 else
                     return null;
-               
             }
             set { league_role_ID = value.Id; }
         }
-
-        
     }
 }

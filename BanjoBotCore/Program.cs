@@ -1,19 +1,19 @@
-﻿using System;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using BanjoBotCore.Controller;
+using BanjoBotCore.Model;
 using Discord;
 using Discord.Commands;
+using Discord.Rest;
 using Discord.WebSocket;
 using log4net;
 using log4net.Config;
-using Microsoft.Extensions.DependencyInjection;
-using System.IO;
 using Microsoft.Extensions.Configuration;
-using BanjoBotCore.Controller;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Threading;
-using BanjoBotCore.Model;
-using Discord.Rest;
+using System.Threading.Tasks;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -48,10 +48,10 @@ namespace BanjoBotCore
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-#if RELEASE 
+#if RELEASE
                 .AddJsonFile("appsettings.json", true, true);
 #else
-                .AddJsonFile("appsettings.dev.json",true,true);
+                .AddJsonFile("appsettings.dev.json", true, true);
 #endif
             _config = builder.Build();
 
@@ -68,7 +68,7 @@ namespace BanjoBotCore
             _log.Info("Initialising...");
             await Initialise();
             await LoadLeagueInformation();
-    
+
             String token = _config.GetValue<String>("Token:Discord");
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
@@ -95,12 +95,12 @@ namespace BanjoBotCore
 
         private IServiceProvider ConfigureServices()
         {
-            CommandServiceConfig commandConfig = new CommandServiceConfig{ CaseSensitiveCommands = false, ThrowOnError = false };
+            CommandServiceConfig commandConfig = new CommandServiceConfig { CaseSensitiveCommands = false, ThrowOnError = false };
             //commandConfig.DefaultRunMode = RunMode.Async;
             CommandService commandService = new CommandService(commandConfig);
             var services = new ServiceCollection()
                 .AddSingleton(_client)
-                .AddSingleton(commandService)                  
+                .AddSingleton(commandService)
                 .AddSingleton(_databaseController)
                 .AddSingleton(_commandController) //Should not be a singleton service, multiple instance should be fine
                 .AddSingleton<IConfiguration>(_config);
@@ -114,7 +114,7 @@ namespace BanjoBotCore
             _log.Info("Loading league information...");
 
             List<League> leagues = await _databaseController.GetLeagues();
-            await _leagueCoordinator.AddLeague(leagues,_commandController);
+            await _leagueCoordinator.AddLeague(leagues, _commandController);
         }
 
         private async Task LoadPlayerBase(League league)
@@ -139,7 +139,7 @@ namespace BanjoBotCore
                     //_log.Debug($"Could not find SocketGuildUser({player.discordID})");
                 }
             }
-            
+
             List<Player> applicants = await _databaseController.GetApplicants(lc.League.LeagueID);
             foreach (Player applicant in applicants)
             {
@@ -156,7 +156,6 @@ namespace BanjoBotCore
                 {
                     //_log.Debug($"Could not find SocketGuildUser({applicant.discordID})");
                 }
-               
             }
         }
 
@@ -169,7 +168,7 @@ namespace BanjoBotCore
             {
                 match.League = league;
                 LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
-             
+
                 foreach (var stats in match.PlayerMatchStats)
                 {
                     Player player = _leagueCoordinator.GetPlayerBySteamID(stats.SteamID);
@@ -192,9 +191,9 @@ namespace BanjoBotCore
             {
                 lobby.League = league;
                 RestTextChannel rtc = await _client.Rest.GetChannelAsync(league.DiscordInformation.Channel.Id) as RestTextChannel;
-                if(lobby.StartMessageID != 0)
+                if (lobby.StartMessageID != 0)
                     lobby.StartMessage = await rtc.GetMessageAsync(lobby.StartMessageID) as RestUserMessage;
-                
+
                 lobby.Host = league.RegisteredPlayers.Find(p => p.SteamID == lobby.HostID);
                 if (lobby.HasStarted)
                 {
@@ -225,10 +224,11 @@ namespace BanjoBotCore
             {
                 _connectedServers.Add(server);
 
-                if (!IsServerInitialised(server)) {
+                if (!IsServerInitialised(server))
+                {
                     _log.Info("Bot connected to : " + server.Name + "(" + server.Id + ")");
                     await UpdateDiscordInformation(server);
-                    foreach(LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
+                    foreach (LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
                     {
                         await LoadPlayerBase(lc.League);
                         await LoadMatchHistory(lc.League);
@@ -306,17 +306,17 @@ namespace BanjoBotCore
         private async Task ServerDisconnected(SocketGuild socketGuild)
         {
             _connectedServers.Remove(socketGuild);
-            
+
             //Workaround for https://github.com/RogueException/Discord.Net/issues/960
             Task.Run(async () =>
             {
                 Thread.Sleep(MillisecondsTimeout);
-                if (!socketGuild.IsConnected && !_connectedServers.Contains(socketGuild)) { 
+                if (!socketGuild.IsConnected && !_connectedServers.Contains(socketGuild))
+                {
                     _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
                     Environment.Exit(1);
                 }
             });
-
         }
 
         private bool IsServerInitialised(SocketGuild server)
@@ -334,12 +334,10 @@ namespace BanjoBotCore
                 if (socketMessageMentionedUser.Id == _client.CurrentUser.Id)
                     await socketMessage.Channel.SendMessageAsync("Fuck you");
             }
-
         }
 
         private async Task OnNewMember(SocketMessage socketMessage)
         {
-
         }
 
         private Task Log(LogMessage arg)
@@ -348,20 +346,24 @@ namespace BanjoBotCore
             {
                 case LogSeverity.Critical:
                     _log.Fatal(arg.Message);
-                    if(arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
+
                 case LogSeverity.Error:
                     _log.Error(arg.Message);
                     if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
+
                 case LogSeverity.Warning:
                     _log.Warn(arg.Message);
                     if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
+
                 case LogSeverity.Debug:
                     _log.Debug(arg.Message);
                     if (arg.Exception != null) _log.Error(arg.Exception.ToString());
                     break;
+
                 case LogSeverity.Info:
                     _log.Info(arg.Message);
                     if (arg.Exception != null) _log.Error(arg.Exception.ToString());
