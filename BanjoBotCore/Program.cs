@@ -21,10 +21,12 @@ namespace BanjoBotCore
 {
     public class Program
     {
+        //TODO: Remove all unnecessary usages of SocketGuildChannel and use the appropriate interface instead (SocketGuildUser/SocketGuild is needed)
+        //TODO: Seperation of concerns: loading data
         private const int MillisecondsTimeout = 30000;
         private DiscordSocketClient _client;
         private IConfiguration _config;
-        private static ILog _log;
+        private static ILog log;
         private List<SocketGuild> _connectedServers;
         private List<SocketGuild> _initialisedServers;
         private LeagueCoordinator _leagueCoordinator;
@@ -32,12 +34,11 @@ namespace BanjoBotCore
         private DatabaseController _databaseController;
         private CommandHandler _handler;
         private DiscordMessageDispatcher _messageDispatcher;
-        //private SocketServer _socketServer;
 
         [STAThread]
         public static void Main(string[] args)
         {
-            _log = LogManager.GetLogger(typeof(Program));
+            log = LogManager.GetLogger(typeof(Program));
             AppDomain.CurrentDomain.UnhandledException += GlobalUnhandledExceptionHandler;
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
@@ -63,9 +64,11 @@ namespace BanjoBotCore
             _client.Log += Log;
             _client.GuildAvailable += ServerConnected;
             _client.GuildUnavailable += ServerDisconnected;
+            _client.UserJoined += UserJoined;
+            _client.UserLeft += UserLeft;
             _client.MessageReceived += BotOnMessageReceived;
 
-            _log.Info("Initialising...");
+            log.Info("Initialising...");
             await Initialise();
             await LoadLeagueInformation();
 
@@ -79,9 +82,9 @@ namespace BanjoBotCore
         {
             _connectedServers = new List<SocketGuild>();
             _initialisedServers = new List<SocketGuild>();
-            _leagueCoordinator = LeagueCoordinator.Instance;
+            _leagueCoordinator = new LeagueCoordinator();
             _messageDispatcher = new DiscordMessageDispatcher();
-            _commandController = new CommandController(_messageDispatcher);
+            _commandController = new CommandController(_messageDispatcher, _leagueCoordinator);
             _databaseController = new DatabaseController();
 
             Thread t = new Thread(new ThreadStart(_messageDispatcher.Run));
@@ -111,39 +114,35 @@ namespace BanjoBotCore
 
         private async Task LoadLeagueInformation()
         {
-            _log.Info("Loading league information...");
+            log.Info("Loading league information...");
 
             List<League> leagues = await _databaseController.GetLeagues();
-            await _leagueCoordinator.AddLeague(leagues, _commandController);
+            await _leagueCoordinator.AddLeagues(leagues, _commandController);
         }
 
         private async Task LoadPlayerBase(League league)
         {
-            _log.Info($"Loading player base of {league.Name}({league.LeagueID})");
+            log.Info($"Loading player base of {league.Name}({league.LeagueID})");
             LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
             List<Player> allPlayers = await _databaseController.GetPlayerBase(league.LeagueID);
             foreach (Player player in allPlayers)
             {
-                SocketGuildUser user = league.DiscordInformation.DiscordServer.GetUser(player.discordID);
+                SocketGuildUser user = league.LeagueDiscordConfig.DiscordServer.GetUser(player.discordID);
                 if (user != null)
                 {
-                    player.User = league.DiscordInformation.DiscordServer.GetUser(player.discordID);
+                    player.User = league.LeagueDiscordConfig.DiscordServer.GetUser(player.discordID);
 
                     if (!lc.League.RegisteredPlayers.Contains(player))
                     {
                         lc.League.RegisteredPlayers.Add(player);
                     }
                 }
-                else
-                {
-                    //_log.Debug($"Could not find SocketGuildUser({player.discordID})");
-                }
             }
 
             List<Player> applicants = await _databaseController.GetApplicants(lc.League.LeagueID);
             foreach (Player applicant in applicants)
             {
-                SocketGuildUser user = league.DiscordInformation.DiscordServer.GetUser(applicant.discordID);
+                SocketGuildUser user = league.LeagueDiscordConfig.DiscordServer.GetUser(applicant.discordID);
                 if (user != null)
                 {
                     applicant.User = user;
@@ -152,16 +151,12 @@ namespace BanjoBotCore
                         lc.League.Applicants.Add(applicant);
                     }
                 }
-                else
-                {
-                    //_log.Debug($"Could not find SocketGuildUser({applicant.discordID})");
-                }
             }
         }
 
         private async Task LoadMatchHistory(League league)
         {
-            _log.Info($"Loading match history of {league.Name}({league.LeagueID})");
+            log.Info($"Loading match history of {league.Name}({league.LeagueID})");
             List<Match> matches = await _databaseController.GetMatchHistory(league.LeagueID);
             league.Matches = matches;
             foreach (var match in matches)
@@ -184,13 +179,13 @@ namespace BanjoBotCore
 
         private async Task LoadLobbies(League league)
         {
-            _log.Info($"Loading open lobbies of {league.Name}({league.LeagueID})");
+            log.Info($"Loading open lobbies of {league.Name}({league.LeagueID})");
             LeagueController lc = _leagueCoordinator.GetLeagueController(league.LeagueID);
             List<Lobby> lobbies = await _databaseController.GetLobbies(league.LeagueID, league.RegisteredPlayers);
             foreach (var lobby in lobbies)
             {
                 lobby.League = league;
-                RestTextChannel rtc = await _client.Rest.GetChannelAsync(league.DiscordInformation.Channel.Id) as RestTextChannel;
+                RestTextChannel rtc = await _client.Rest.GetChannelAsync(league.LeagueDiscordConfig.Channel.Id) as RestTextChannel;
                 if (lobby.StartMessageID != 0)
                     lobby.StartMessage = await rtc.GetMessageAsync(lobby.StartMessageID) as RestUserMessage;
 
@@ -200,7 +195,7 @@ namespace BanjoBotCore
                     lobby.Match = league.Matches.Find(m => m.MatchID == lobby.MatchID);
                     if (lobby.Match == null)
                     {
-                        _log.Warn($"Loading Lobby: Couldn't find match #{lobby.MatchID}");
+                        log.Warn($"Loading Lobby: Couldn't find match #{lobby.MatchID}");
                         continue;
                     }
 
@@ -226,7 +221,7 @@ namespace BanjoBotCore
 
                 if (!IsServerInitialised(server))
                 {
-                    _log.Info("Bot connected to : " + server.Name + "(" + server.Id + ")");
+                    log.Info("Bot connected to : " + server.Name + "(" + server.Id + ")");
                     await UpdateDiscordInformation(server);
                     foreach (LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
                     {
@@ -237,7 +232,7 @@ namespace BanjoBotCore
                 }
                 else
                 {
-                    _log.Info("Bot reconnected to : " + server.Name + "(" + server.Id + ")");
+                    log.Info("Bot reconnected to : " + server.Name + "(" + server.Id + ")");
                     await ServerValidation(server);
                 }
             }
@@ -245,14 +240,14 @@ namespace BanjoBotCore
 
         private async Task UpdateDiscordInformation(SocketGuild server)
         {
-            _log.Info("Update discord information of " + server.Name + "(" + server.Id + ")...");
+            log.Info("Update discord information of " + server.Name + "(" + server.Id + ")...");
             foreach (var lc in _leagueCoordinator.GetLeagueControllersByServer(server))
             {
-                if (lc.League.DiscordInformation != null)
+                if (lc.League.LeagueDiscordConfig != null)
                 {
-                    if (lc.League.DiscordInformation.DiscordServerId == server.Id)
+                    if (lc.League.LeagueDiscordConfig.DiscordServerId == server.Id)
                     {
-                        lc.League.DiscordInformation.DiscordServer = server;
+                        lc.League.LeagueDiscordConfig.DiscordServer = server;
                     }
                 }
             }
@@ -262,11 +257,12 @@ namespace BanjoBotCore
         //Validates all discord related data if the server disconnected
         //Discord accounts, channel, roles might be deleted while the bot is not connected
         //Working with old discord data might result in a NullPointerException
+        //TODO: Should be replaced by dynamic player loading (Loading on PlayerJoined, PlayerLeft)
         public async Task ServerValidation(SocketGuild server)
         {
             foreach (LeagueController lc in _leagueCoordinator.GetLeagueControllersByServer(server))
             {
-                _log.Info("Validating server " + server.Name + "(" + server.Id + ")...");
+                log.Info("Validating server " + server.Name + "(" + server.Id + ")...");
 
                 //TODO: More Validation (Channels, Roles, ...)
                 List<Player> deletedDiscordAccounts = new List<Player>();
@@ -313,7 +309,7 @@ namespace BanjoBotCore
                 Thread.Sleep(MillisecondsTimeout);
                 if (!socketGuild.IsConnected && !_connectedServers.Contains(socketGuild))
                 {
-                    _log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
+                    log.Error($"Could not reconnect to {socketGuild.Name}({socketGuild.Id})");
                     Environment.Exit(1);
                 }
             });
@@ -336,8 +332,24 @@ namespace BanjoBotCore
             }
         }
 
-        private async Task OnNewMember(SocketMessage socketMessage)
+        private async Task UserJoined(SocketGuildUser user)
         {
+            log.Info($"Player joined the server {user.Username}({user.Id})");
+            log.Info($"Loading player from database DiscordID = {user.Id})");
+            Player player = await _databaseController.GetPlayer(user.Id);
+            if (player != null)
+            {
+                player.User = user;
+                if (!lc.League.Applicants.Contains(applicant))
+                {
+                    lc.League.Applicants.Add(applicant);
+                }
+            }
+        }
+
+        private async Task UserLeft(SocketGuildUser user)
+        {
+
         }
 
         private Task Log(LogMessage arg)
@@ -345,28 +357,28 @@ namespace BanjoBotCore
             switch (arg.Severity)
             {
                 case LogSeverity.Critical:
-                    _log.Fatal(arg.Message);
-                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    log.Fatal(arg.Message);
+                    if (arg.Exception != null) log.Error(arg.Exception.ToString());
                     break;
 
                 case LogSeverity.Error:
-                    _log.Error(arg.Message);
-                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    log.Error(arg.Message);
+                    if (arg.Exception != null) log.Error(arg.Exception.ToString());
                     break;
 
                 case LogSeverity.Warning:
-                    _log.Warn(arg.Message);
-                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    log.Warn(arg.Message);
+                    if (arg.Exception != null) log.Error(arg.Exception.ToString());
                     break;
 
                 case LogSeverity.Debug:
-                    _log.Debug(arg.Message);
-                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    log.Debug(arg.Message);
+                    if (arg.Exception != null) log.Error(arg.Exception.ToString());
                     break;
 
                 case LogSeverity.Info:
-                    _log.Info(arg.Message);
-                    if (arg.Exception != null) _log.Error(arg.Exception.ToString());
+                    log.Info(arg.Message);
+                    if (arg.Exception != null) log.Error(arg.Exception.ToString());
                     break;
             }
 
@@ -377,7 +389,7 @@ namespace BanjoBotCore
         {
             Exception ex = default(Exception);
             ex = (Exception)e.ExceptionObject;
-            _log.Error(ex.ToString());
+            log.Error(ex.ToString());
         }
     }
 }

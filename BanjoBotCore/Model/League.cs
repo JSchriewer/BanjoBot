@@ -1,66 +1,27 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace BanjoBotCore.Model
 {
     public class League
     {
-        public DiscordInformation DiscordInformation { get; set; } = null;
+        public LeagueDiscordConfig LeagueDiscordConfig { get; set; }
         public int LeagueID { get; set; }
         public string Name { get; set; } = "";
-        public List<Player> RegisteredPlayers { get; set; }
-        public List<Player> Applicants { get; set; }
-        public List<Match> Matches { get; set; }
+        public List<Match> Matches { get; set; } = new List<Match>();
         public int Season { get; set; }
-        public int GameCounter { get; set; }
 
-        public League(int id, string name, int season, int gameCounter = 0)
+        public League(int id, string name, int season)
         {
             LeagueID = id;
             Name = name;
             Season = season;
-            GameCounter = gameCounter;
-            RegisteredPlayers = new List<Player>();
-            Applicants = new List<Player>();
-            Matches = new List<Match>();
-        }
-
-        public Player GetPlayerByDiscordID(ulong id)
-        {
-            foreach (Player player in RegisteredPlayers)
-            {
-                if (player.discordID == id)
-                {
-                    return player;
-                }
-            }
-
-            return null;
-        }
-
-        public Player GetApplicantByDiscordID(ulong id)
-        {
-            foreach (Player player in Applicants)
-            {
-                if (player.discordID == id)
-                    return player;
-            }
-            return null;
-        }
-
-        public List<Player> GetLeaderBoard()
-        {
-            return (List<Player>)RegisteredPlayers.OrderBy(player => player.GetLeagueStats(LeagueID, Season).MMR).Reverse().ToList();
-        }
-
-        public List<Player> GetLeaderBoard(int season)
-        {
-            return (List<Player>)RegisteredPlayers.OrderBy(player => player.GetLeagueStats(LeagueID, season).MMR).Reverse().ToList();
         }
 
         public bool HasDiscord()
         {
-            if (DiscordInformation != null && DiscordInformation.DiscordServer != null)
+            if (LeagueDiscordConfig != null)
             {
                 return true;
             }

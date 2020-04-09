@@ -4,22 +4,27 @@ using System.Collections.Generic;
 
 namespace BanjoBotCore.Model
 {
+    public enum Regions { Aus, Asia, Eu, Na };
+    public enum Server { Australia, Chile, EuropeEast, EuropeWest, India, Peru, Russia, Asia, SouthAfrica, SouthAmerica, USEast, USWest};
+
     public class Player : IEquatable<Player>
     {
         public SocketGuildUser User { get; set; }
         public ulong discordID { get; }
         public ulong SteamID { get; set; }
         public Lobby CurrentGame { get; set; }
-        public List<PlayerStats> PlayerStats { get; set; }
-        public List<Match> Matches { get; set; }
+        public List<PlayerStats> PlayerStats { get; set; } = new List<PlayerStats>();
+        public List<Match> Matches { get; set; } = new List<Match>();
+        public Regions Region { get; set; }
+        public Server PreferedServer { get; set; }
+        public bool Approved { get; set; }
 
         public Player(SocketGuildUser discordUser, ulong steamid)
         {
             User = discordUser;
             SteamID = steamid;
             CurrentGame = null;
-            PlayerStats = new List<PlayerStats>();
-            Matches = new List<Match>();
+            Approved = false;
             discordID = User.Id;
         }
 
@@ -27,17 +32,14 @@ namespace BanjoBotCore.Model
         {
             SteamID = steamid;
             CurrentGame = null;
-            PlayerStats = new List<PlayerStats>();
-            Matches = new List<Match>();
         }
 
-        public Player(ulong discord_id, ulong steamid)
+        public Player(ulong discord_id, ulong steamid, bool approved)
         {
             discordID = discord_id;
             SteamID = steamid;
             CurrentGame = null;
-            PlayerStats = new List<PlayerStats>();
-            Matches = new List<Match>();
+            Approved = approved;
         }
 
         public bool Equals(Player other)

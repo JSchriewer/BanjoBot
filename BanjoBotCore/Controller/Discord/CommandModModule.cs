@@ -128,7 +128,7 @@ namespace BanjoBotCore.Controller
                 socketGuildChannel = (SocketGuildChannel)Context.Channel;
             }
 
-            await _commandController.DeclineApplicant(Context.Channel, socketGuildChannel, guildUser, reasoning);
+            await _commandController.RejectApplicant(Context.Channel, socketGuildChannel, guildUser, reasoning);
         }
 
         [Command("listleagues"), Summary("(Moderator) !listleagues | Lists all leagues and details")]
@@ -194,7 +194,7 @@ namespace BanjoBotCore.Controller
 
         public bool CheckModeratorPermission(SocketGuildUser user, LeagueController lc)
         {
-            if (lc.League.DiscordInformation.ModeratorRole != null && (user.Roles.Contains(lc.League.DiscordInformation.ModeratorRole) || user.GuildPermissions.Administrator))
+            if (lc.League.LeagueDiscordConfig.ModeratorRole != null && (user.Roles.Contains(lc.League.LeagueDiscordConfig.ModeratorRole) || user.GuildPermissions.Administrator))
             {
                 return true;
             }

@@ -216,32 +216,32 @@ namespace BanjoBotCore
             command.Parameters.AddWithValue("@name", league.Name);
             await ExecuteNoQuery(command);
 
-            if (league.DiscordInformation == null)
+            if (league.LeagueDiscordConfig == null)
                 return;
 
             command = new MySqlCommand();
             command.CommandText =
                 "Replace into discord_information (server_id,league_id,channel_id,role_id,auto_accept,need_steam_register,mod_role_id,moderator_channel) values (@server_id, @league_id,@channel_id,@role_id,@autoaccept,@steamreg,@modrole,@moderator_channel)";
             command.Parameters.AddWithValue("@league_id", league.LeagueID);
-            command.Parameters.AddWithValue("@server_id", league.DiscordInformation.DiscordServer.Id);
-            command.Parameters.AddWithValue("@autoaccept", league.DiscordInformation.AutoAccept);
-            command.Parameters.AddWithValue("@steamreg", league.DiscordInformation.NeedSteamToRegister);
-            if (league.DiscordInformation.ModeratorRole == null)
+            command.Parameters.AddWithValue("@server_id", league.LeagueDiscordConfig.DiscordServer.Id);
+            command.Parameters.AddWithValue("@autoaccept", league.LeagueDiscordConfig.AutoAccept);
+            command.Parameters.AddWithValue("@steamreg", league.LeagueDiscordConfig.NeedSteamToRegister);
+            if (league.LeagueDiscordConfig.ModeratorRole == null)
                 command.Parameters.AddWithValue("@modrole", DBNull.Value);
             else
-                command.Parameters.AddWithValue("@modrole", league.DiscordInformation.ModeratorRole.Id);
-            if (league.DiscordInformation.LeagueRole == null)
+                command.Parameters.AddWithValue("@modrole", league.LeagueDiscordConfig.ModeratorRole.Id);
+            if (league.LeagueDiscordConfig.LeagueRole == null)
                 command.Parameters.AddWithValue("@role_id", DBNull.Value);
             else
-                command.Parameters.AddWithValue("@role_id", league.DiscordInformation.LeagueRole.Id);
-            if (league.DiscordInformation.Channel == null)
+                command.Parameters.AddWithValue("@role_id", league.LeagueDiscordConfig.LeagueRole.Id);
+            if (league.LeagueDiscordConfig.Channel == null)
                 command.Parameters.AddWithValue("@channel_id", DBNull.Value);
             else
-                command.Parameters.AddWithValue("@channel_id", league.DiscordInformation.Channel.Id);
-            if (league.DiscordInformation.ModeratorChannel == null)
+                command.Parameters.AddWithValue("@channel_id", league.LeagueDiscordConfig.Channel.Id);
+            if (league.LeagueDiscordConfig.ModeratorChannel == null)
                 command.Parameters.AddWithValue("@moderator_channel", DBNull.Value);
             else
-                command.Parameters.AddWithValue("@moderator_channel", league.DiscordInformation.ModeratorChannel.Id);
+                command.Parameters.AddWithValue("@moderator_channel", league.LeagueDiscordConfig.ModeratorChannel.Id);
 
             await ExecuteNoQuery(command);
         }
@@ -298,7 +298,7 @@ namespace BanjoBotCore
             await ExecuteNoQuery(command);
         }
 
-        public async Task InsertSignupToLeague(ulong steamID, League league)
+        public async Task InsertSignup(ulong steamID, League league)
         {
             log.Debug("InsertSignupToLeague");
             MySqlCommand command = new MySqlCommand();
@@ -480,16 +480,92 @@ namespace BanjoBotCore
                             match_count = reader.GetInt32(i);
                         }
                     }
-                    League league = new League(leagueID, name, season, match_count);
+                    League league = new League(leagueID, name, season);
                     if (server_id != ulong.MinValue)
                     {
-                        league.DiscordInformation = new DiscordInformation(server_id, channel, modRoleID, role, modChannel, autoAccept, needSteamReg);
+                        league.LeagueDiscordConfig = new LeagueDiscordConfig(server_id, channel, modRoleID, role, modChannel, autoAccept, needSteamReg);
                     }
                     leagues.Add(league);
                 }
             }
 
             return leagues;
+        }
+
+        public async Task<Player> GetPlayer(ulong steamID)
+        {
+            Player player = null;
+
+            log.Debug($"GetPlayer SteamID = {steamID}");
+            MySqlCommand command = new MySqlCommand();
+
+            command.CommandText = "Select * from players p " +
+                                    "inner join players_leagues pl on p.steam_id = pl.steam_id " +
+                                    "inner join player_stats ps on p.steam_id = ps.steam_id and pl.league_id=ps.league_id " +
+                                    "where pl.steam_id = @steam_id";
+
+            command.Parameters.AddWithValue("@steam_id", steamID);
+
+            using (MySqlDataReader reader = await ExecuteReader(command))
+            {
+                while (reader.Read())
+                {
+                    ulong discordId = ulong.MinValue;
+                    ulong steamId = 0;
+                    int season = 0;
+                    int streak = 0;
+                    int matches = 0;
+                    int wins = 0;
+                    int losses = 0;
+                    int mmr = 0;
+                    int leagueId = 0;
+
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        if (!reader.IsDBNull(i) && reader.GetName(i).Equals("discord_id"))
+                        {
+                            discordId = reader.GetUInt64(i);
+                        }
+                        else if (reader.GetName(i).Equals("steam_id"))
+                        {
+                            steamId = reader.GetUInt64(i);
+                        }
+                        else if (reader.GetName(i).Equals("season"))
+                        {
+                            season = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("streak"))
+                        {
+                            streak = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("matches"))
+                        {
+                            matches = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("wins"))
+                        {
+                            wins = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("losses"))
+                        {
+                            losses = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("mmr"))
+                        {
+                            mmr = reader.GetInt32(i);
+                        }
+                        else if (reader.GetName(i).Equals("league_id"))
+                        {
+                            leagueId = reader.GetInt32(i);
+                        }
+                    }
+                    if(player == null)
+                        player = new Player(discordId, steamId);
+                    player.PlayerStats.Add(new PlayerStats(leagueId, season, matches, wins, losses, mmr, streak));
+                }
+            }
+
+            return player;
         }
 
         public async Task<List<Player>> GetPlayerBase(int leagueID)

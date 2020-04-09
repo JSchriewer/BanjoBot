@@ -36,7 +36,7 @@ namespace BanjoBotCore.Model
 
         public Match(Lobby lobby)
         {
-            //TODO: LeagueID, Season needed?
+            //TODO: LeagueID needed?
             League = lobby.League;
             LeagueID = lobby.League.LeagueID;
             SteamMatchID = 0;

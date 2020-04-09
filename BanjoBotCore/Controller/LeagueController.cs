@@ -5,26 +5,16 @@ using Discord.WebSocket;
 using log4net;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BanjoBotCore
 {
-    //TODO: throw Exception in Remove/AddPLayer() <- bool? removePlayerResult = Lobby.RemovePlayer(user);
-    //->Duplicated code LeavePlayer / KickPlayer
-    //TODO: Don't catch database exceptions
-    //->Use try{}finally{} for error handling wherever possible
-    // Eventargs should be immutable -> implement ICloneable in Model classes or use DTOs later
-
     public class LeagueController
     {
         private static readonly ILog log = log4net.LogManager.GetLogger(typeof(LeagueController));
 
-        private event EventHandler<RegistrationEventArgs> PlayerRegistrationAccepted;
-
-        private event EventHandler<RegistrationEventArgs> PlayerRegistered;
-
         private event EventHandler<SeasonEventArgs> SeasonEnded;
-
         public League League { get; }
         public LobbyController LobbyController { get; }
         private DatabaseController _database;
@@ -38,162 +28,66 @@ namespace BanjoBotCore
 
         public async Task RegisterEventListener(ILeagueEventListener listener)
         {
-            PlayerRegistrationAccepted += listener.PlayerRegistrationAccepted;
-            PlayerRegistered += listener.PlayerRegistered;
             SeasonEnded += listener.SeasonEnded;
             await LobbyController.RegisterEventListener(listener);
         }
 
-        public async Task<Player> RegisterPlayer(SocketGuildUser user, ulong steamID)
+        public async Task<List<Player>> GetLeaderBoard()
         {
-            log.Debug("Creating new player");
-            Player player = new Player(user, steamID);
-            try
-            {
-                await _database.InsertPlayer(player);
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
-
-            await RegisterPlayer(player);
-            return player;
+            List<Player> players = await GetActivePlayers();
+            return players.OrderBy(player => player.GetLeagueStats(League.LeagueID, League.Season).MMR).Reverse().ToList();
         }
 
-        public async Task RegisterPlayer(Player player)
+        public async Task<List<Player>> GetLeaderBoard(int season)
         {
-            if (League.DiscordInformation.AutoAccept)
-            {
-                await AcceptRegistration(player);
-            }
-            else
-            {
-                log.Debug("Add applicant" + player.User.Username + " to " + League.Name);
-                try
-                {
-                    await _database.InsertSignupToLeague(player.SteamID, League);
-                    League.Applicants.Add(player);
-                    await OnPlayerRegistered(player, League);
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                }
-            }
+            List<Player> players = await GetActivePlayers();
+            return players.OrderBy(player => player.GetLeagueStats(League.LeagueID, season).MMR).Reverse().ToList();
         }
 
-        public async Task AcceptRegistration(Player player)
+        public async Task<List<Player>> GetActivePlayers()
         {
-            log.Debug("RegisterPlayer: " + player.Name + "(" + player.User.Id + ")");
-
-            try
-            {
-                player.PlayerStats.Add(new PlayerStats(League.LeagueID, League.Season));
-                await _database.InsertRegistrationToLeague(player, League);
-                await _database.UpdatePlayerStats(player, player.GetLeagueStats(League.LeagueID, League.Season));
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
-
-            if (League.Applicants.Contains(player))
-            {
-                League.Applicants.Remove(player);
-            }
-
-            League.RegisteredPlayers.Add(player);
-            await OnPlayerRegistrationAccepted(player);
-        }
-
-        public async Task RemovePlayerFromLeague(Player player)
-        {
-            League.Applicants.Remove(player);
-            await _database.DeleteRegistration(player.SteamID, League);
+            //TODO: GetActivePlayers
+            //return context.Players.Where();
+            return new List<Player>();
         }
 
         public async Task StartNewSeason()
         {
-            int season = League.Season;
+            //int season = League.Season;
 
-            foreach (Player player in League.RegisteredPlayers)
-            {
-                PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
-                player.PlayerStats.Add(newStats);
-                await _database.UpdatePlayerStats(player, newStats);
-            }
+            //foreach (Player player in League.RegisteredPlayers)
+            //{
+            //    PlayerStats newStats = new PlayerStats(League.LeagueID, League.Season + 1);
+            //    player.PlayerStats.Add(newStats);
+            //    await _database.UpdatePlayerStats(player, newStats);
+            //}
 
-            League.Season++;
-            League.Matches = new List<Match>();
-            League.GameCounter = 0;
-            await _database.UpdateLeague(League);
+            //League.Season++;
+            //League.Matches = new List<Match>();
+            //await _database.UpdateLeague(League);
 
-            await OnSeasonEnded(League, season);
+            //await OnSeasonEnded(League, season, GetLeaderBoard(season));
         }
 
-        public async Task SetModChannel(IChannel modChannel)
+        public async Task SetLeagueChannel(SocketGuildChannel socketGuildChannel)
         {
-            League.DiscordInformation.ModeratorChannel = (SocketGuildChannel)modChannel;
-            await _database.UpdateLeague(League);
-        }
-
-        public async Task SetAutoAccept(Boolean autoAccept)
-        {
-            League.DiscordInformation.AutoAccept = autoAccept;
-            await _database.UpdateLeague(League);
-        }
-
-        public async Task SetSteamRegister(Boolean steamRegister)
-        {
-            League.DiscordInformation.NeedSteamToRegister = steamRegister;
-            await _database.UpdateLeague(League);
-        }
-
-        public async Task SetChannel(SocketGuildChannel socketGuildChannel)
-        {
-            League.DiscordInformation.Channel = (SocketGuildChannel)socketGuildChannel;
-            await _database.UpdateLeague(League);
-        }
-
-        public async Task SetLeagueRole(SocketRole role)
-        {
-            League.DiscordInformation.LeagueRole = role;
+            League.LeagueDiscordConfig.LeagueChannel = socketGuildChannel;
             await _database.UpdateLeague(League);
         }
 
         public async Task SetModRole(SocketRole role)
         {
-            League.DiscordInformation.ModeratorRole = role;
+            League.LeagueDiscordConfig.ModeratorRole = role;
             await _database.UpdateLeague(League);
         }
 
-        protected async Task OnPlayerRegistered(Player player, League league)
-        {
-            EventHandler<RegistrationEventArgs> handler = PlayerRegistered;
-            RegistrationEventArgs args = new RegistrationEventArgs();
-            args.Player = player;
-            args.League = league;
-
-            handler?.Invoke(this, args);
-        }
-
-        protected async Task OnPlayerRegistrationAccepted(Player player)
-        {
-            EventHandler<RegistrationEventArgs> handler = PlayerRegistrationAccepted;
-            RegistrationEventArgs args = new RegistrationEventArgs();
-            args.Player = player;
-            args.League = League;
-
-            handler?.Invoke(this, args);
-        }
-
-        protected async Task OnSeasonEnded(League league, int season)
+        protected async Task OnSeasonEnded(League league, int season, List<Player> leaderBoard)
         {
             EventHandler<SeasonEventArgs> handler = SeasonEnded;
             SeasonEventArgs args = new SeasonEventArgs();
             args.League = league;
             args.Season = season;
+            args.LeaderBoard = leaderBoard;
 
             handler?.Invoke(this, args);
         }
@@ -204,14 +98,10 @@ namespace BanjoBotCore
         public League League { get; set; }
     }
 
-    public class RegistrationEventArgs : LeagueEventArgs
-    {
-        public Player Player { get; set; }
-    }
-
     public class SeasonEventArgs : LeagueEventArgs
     {
         public int Season { get; set; }
+        public List<Player> LeaderBoard { get; set; }
     }
 
     [Serializable]

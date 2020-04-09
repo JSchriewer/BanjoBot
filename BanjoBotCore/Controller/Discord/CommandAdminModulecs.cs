@@ -52,20 +52,10 @@ namespace BanjoBotCore.Controller
                 await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync("```" + s + "```");
         }
 
-        [Command("setmodchannel"), Summary("(Admin) !setmodchannel #ModChannel [#league_channel] | Sets moderator channel"), RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetModChannel([Summary("#ModChannel")]IChannel modChannel, [Summary("#LeagueChannel")]IChannel leagueChannel = null)
+        [Command("setmodchannel"), Summary("(Admin) !setmodchannel #ModChannel | Sets moderator channel"), RequireUserPermission(GuildPermission.Administrator)]
+        public async Task SetModChannel([Summary("#ModChannel")]ITextChannel modChannel)
         {
-            SocketGuildChannel socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            if (leagueChannel != null)
-            {
-                socketGuildChannel = (SocketGuildChannel)leagueChannel;
-            }
-            else
-            {
-                socketGuildChannel = (SocketGuildChannel)Context.Channel;
-            }
-
-            await _commandController.SetModChannel(Context.Channel, socketGuildChannel, modChannel);
+            await _commandController.SetModChannel((ITextChannel)Context.Channel, (SocketGuildChannel)modChannel);
         }
 
         [Command("autoaccept"), Summary("(Admin) !autoaccept <true/false> [#league_channel] | Registrations do not have to be manually accepted by a moderator if activated"), RequireUserPermission(GuildPermission.Administrator)]
@@ -103,7 +93,7 @@ namespace BanjoBotCore.Controller
         [Command("createleague"), Summary("(Admin) !createLeague <Name> [#league_channel] | Creates a league"), RequireUserPermission(GuildPermission.Administrator)]
         public async Task CreateLeague([Summary("LeagueName")]string name, [Summary("#Channel")]IChannel channel = null)
         {
-            SocketGuildChannel socketGuildChannel = null;
+            SocketGuildChannel socketGuildChannel;
             if (channel != null)
             {
                 socketGuildChannel = (SocketGuildChannel)channel;
@@ -113,7 +103,7 @@ namespace BanjoBotCore.Controller
                 socketGuildChannel = (SocketGuildChannel)Context.Channel;
             }
 
-            await _commandController.CreateLeague(Context.Channel, socketGuildChannel, (SocketGuild)Context.Guild, name);
+            await _commandController.CreateLeague(Context.Channel, socketGuildChannel, name);
         }
 
         [Command("deleteleague"), Summary("(Admin) !deleteleague [#league_channel] | Deletes a league"), RequireUserPermission(GuildPermission.Administrator)]
@@ -145,7 +135,7 @@ namespace BanjoBotCore.Controller
                 socketGuildChannel = (SocketGuildChannel)Context.Channel;
             }
 
-            await _commandController.SetChannel(Context.Channel, (SocketGuildChannel)newChannel, socketGuildChannel);
+            await _commandController.SetLeagueChannel(Context.Channel, (SocketGuildChannel)newChannel, socketGuildChannel);
         }
 
         [Command("setrole"), Summary("(Admin) !setrole [@Role] [#league_channel] | Sets or delete the league role"), RequireUserPermission(GuildPermission.Administrator)]
